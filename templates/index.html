@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  {% load static %}
+  <meta charset="utf-8">
+  <title>Eduverse</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+
+<body>
+  <div class="container">
+    <div class="profile-sidebar">
+      
+      <!-- Debug: Picture value = "{{ user_data.picture }}" -->
+      {% if user_data.picture %}
+      <img src="{{ user_data.picture }}" alt="Profile" class="profile-picture">
+      {% else %}
+      <div class="profile-picture-placeholder">
+        {{ user_data.email|slice:":1"|upper }}
+      </div>
+      {% endif %}
+
+      <div class="profile-info">
+        {% if user_data.name %}
+        <div class="profile-name">{{ user_data.name }}</div>
+        {% endif %}
+        <div class="profile-email">{{ user_data.email }}</div>
+        {% if user_data.verified_email %}
+        <div class="profile-verified">✓ Verified</div>
+        {% endif %}
+        {% if user_data.given_name %}
+        <div class="profile-detail">First Name: {{ user_data.given_name }}</div>
+        {% endif %}
+        {% if user_data.family_name %}
+        <div class="profile-detail">Last Name: {{ user_data.family_name }}</div>
+        {% endif %}
+        {% if user_data.locale %}
+        <div class="profile-locale">Language: {{ user_data.locale }}</div>
+        {% endif %}
+      </div>
+
+      <a href="{% url 'logout' %}" class="logout-btn">Sign out</a>
+    </div>
+
+    {% if all_data %}
+    <div class="content">
+      <div class="all-data-section">
+        <div class="data-title">User Data</div>
+
+        {% if all_data.name %}
+        <div class="data-item"><span class="data-key">Full Name</span><span class="data-value">{{ all_data.name }}</span></div>
+        {% endif %}
+        {% if all_data.given_name %}
+        <div class="data-item"><span class="data-key">First Name</span><span class="data-value">{{ all_data.given_name }}</span></div>
+        {% endif %}
+        {% if all_data.family_name %}
+        <div class="data-item"><span class="data-key">Last Name</span><span class="data-value">{{ all_data.family_name }}</span></div>
+        {% endif %}
+        {% if all_data.email %}
+        <div class="data-item"><span class="data-key">Email</span><span class="data-value">{{ all_data.email }}</span></div>
+        {% endif %}
+        {% if all_data.email_verified %}
+        <div class="data-item"><span class="data-key">Email Verified</span><span class="data-value">{{ all_data.email_verified }}</span></div>
+        {% endif %}
+        {% if all_data.locale %}
+        <div class="data-item"><span class="data-key">Language</span><span class="data-value">{{ all_data.locale }}</span></div>
+        {% endif %}
+        {% if all_data.picture %}
+        <div class="data-item"><span class="data-key">Picture URL</span><span class="data-value">{{ all_data.picture }}</span></div>
+        {% endif %}
+
+        <details class="advanced-data">
+          <summary class="advanced-data-summary">Advanced Data</summary>
+          <div class="advanced-data-content">
+            {% with primary_keys='name,given_name,family_name,email,email_verified,locale,picture' %}
+            {% for key, value in all_data.items %}
+              {% if key not in primary_keys %}
+                <div class="data-item">
+                  <span class="data-key">{{ key }}</span>
+                  <span class="data-value">{{ value }}</span>
+                </div>
+              {% endif %}
+            {% endfor %}
+            {% endwith %}
+          </div>
+        </details>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</body>
+
+</html>
