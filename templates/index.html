@@ -4,90 +4,71 @@
 <head>
   {% load static %}
   <meta charset="utf-8">
-  <title>Eduverse</title>
+  <title>Eduverse Mail</title>
   <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
 
 <body>
-  <div class="container">
-    <div class="profile-sidebar">
-      
-      <!-- Debug: Picture value = "{{ user_data.picture }}" -->
-      {% if user_data.picture %}
-      <img src="{{ user_data.picture }}" alt="Profile" class="profile-picture">
-      {% else %}
-      <div class="profile-picture-placeholder">
-        {{ user_data.email|slice:":1"|upper }}
+  <div class="gmail-container">
+    <!-- Header -->
+    <div class="gmail-header">
+      <div class="gmail-logo">
+        <h1>Eduverse Mail</h1>
       </div>
-      {% endif %}
-
-      <div class="profile-info">
-        {% if user_data.name %}
-        <div class="profile-name">{{ user_data.name }}</div>
+      <div class="gmail-user">
+        {% if user_data.picture %}
+        <img src="{{ user_data.picture }}" alt="Profile" class="header-profile-pic">
+        {% else %}
+        <div class="header-profile-placeholder">{{ user_data.email|slice:":1"|upper }}</div>
         {% endif %}
-        <div class="profile-email">{{ user_data.email }}</div>
-        {% if user_data.verified_email %}
-        <div class="profile-verified">✓ Verified</div>
-        {% endif %}
-        {% if user_data.given_name %}
-        <div class="profile-detail">First Name: {{ user_data.given_name }}</div>
-        {% endif %}
-        {% if user_data.family_name %}
-        <div class="profile-detail">Last Name: {{ user_data.family_name }}</div>
-        {% endif %}
-        {% if user_data.locale %}
-        <div class="profile-locale">Language: {{ user_data.locale }}</div>
-        {% endif %}
+        <span class="header-email">{{ user_data.email }}</span>
+        <a href="{% url 'logout' %}" class="header-logout">Sign out</a>
       </div>
-
-      <a href="{% url 'logout' %}" class="logout-btn">Sign out</a>
     </div>
 
-    {% if all_data %}
-    <div class="content">
-      <div class="all-data-section">
-        <div class="data-title">User Data</div>
+    <div class="gmail-body">
+      <!-- Sidebar -->
+      <div class="gmail-sidebar">
 
-        {% if all_data.name %}
-        <div class="data-item"><span class="data-key">Full Name</span><span class="data-value">{{ all_data.name }}</span></div>
-        {% endif %}
-        {% if all_data.given_name %}
-        <div class="data-item"><span class="data-key">First Name</span><span class="data-value">{{ all_data.given_name }}</span></div>
-        {% endif %}
-        {% if all_data.family_name %}
-        <div class="data-item"><span class="data-key">Last Name</span><span class="data-value">{{ all_data.family_name }}</span></div>
-        {% endif %}
-        {% if all_data.email %}
-        <div class="data-item"><span class="data-key">Email</span><span class="data-value">{{ all_data.email }}</span></div>
-        {% endif %}
-        {% if all_data.email_verified %}
-        <div class="data-item"><span class="data-key">Email Verified</span><span class="data-value">{{ all_data.email_verified }}</span></div>
-        {% endif %}
-        {% if all_data.locale %}
-        <div class="data-item"><span class="data-key">Language</span><span class="data-value">{{ all_data.locale }}</span></div>
-        {% endif %}
-        {% if all_data.picture %}
-        <div class="data-item"><span class="data-key">Picture URL</span><span class="data-value">{{ all_data.picture }}</span></div>
-        {% endif %}
+        <div class="sidebar-menu">
+          <div class="menu-item active">📥 Inbox</div>
+        </div>
+      </div>
 
-        <details class="advanced-data">
-          <summary class="advanced-data-summary">Advanced Data</summary>
-          <div class="advanced-data-content">
-            {% with primary_keys='name,given_name,family_name,email,email_verified,locale,picture' %}
-            {% for key, value in all_data.items %}
-              {% if key not in primary_keys %}
-                <div class="data-item">
-                  <span class="data-key">{{ key }}</span>
-                  <span class="data-value">{{ value }}</span>
-                </div>
-              {% endif %}
-            {% endfor %}
-            {% endwith %}
+      <!-- Email List -->
+      <div class="gmail-content">
+        {% if emails %}
+        <div class="email-list-header">
+          <h2>Inbox ({{ emails|length }})</h2>
+        </div>
+        <div class="email-list">
+          {% for email in emails %}
+          <div class="email-row">
+            <div class="email-checkbox">
+              <input type="checkbox">
+            </div>
+            <div class="email-star">⭐</div>
+            <div class="email-sender">{{ email.sender|truncatechars:25 }}</div>
+            <div class="email-content">
+              <span class="email-subject">{{ email.subject|truncatechars:50 }}</span>
+              <span class="email-snippet"> - {{ email.snippet|truncatechars:80 }}</span>
+            </div>
+            <div class="email-date">{{ email.date|date:"M d" }}</div>
           </div>
-        </details>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-emails">
+          <div class="no-emails-icon">📧</div>
+          <h3>No emails found</h3>
+          <p>Your inbox is empty or Gmail access needs to be granted.</p>
+          <p class="help-text">Make sure you granted Gmail permissions when signing in.</p>
+        </div>
+        {% endif %}
       </div>
     </div>
-    {% endif %}
+
+
   </div>
 </body>
 

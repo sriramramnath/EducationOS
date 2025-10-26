@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from .gmail_service import GmailService
 
 @login_required
 def Home(request):
@@ -10,6 +11,7 @@ def Home(request):
     # Default values
     user_data = {}
     all_data = {}
+    emails = []
     
     try:
         # Get the social account data - try by user first (provider ID might be numeric)
@@ -32,10 +34,14 @@ def Home(request):
                 'locale': extra_data.get('locale', ''),
             }
             
-            print("=" * 70)
-            print(f"Picture URL: {user_data['picture']}")
-            print(f"All data keys: {list(extra_data.keys())}")
-            print("=" * 70)
+            # Try to fetch Gmail emails
+            try:
+                gmail_service = GmailService(request.user)
+                emails = gmail_service.get_emails(10)
+                print(f"Fetched {len(emails)} emails")
+            except Exception as e:
+                print(f"Error fetching emails: {e}")
+                emails = []
         else:
             raise SocialAccount.DoesNotExist
         
@@ -49,6 +55,7 @@ def Home(request):
     context = {
         'user_data': user_data,
         'all_data': all_data,
+        'emails': emails,
     }
 
     return render(request, 'index.html', context)

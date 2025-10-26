@@ -152,12 +152,17 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': [
             'profile',
             'email',
+            'https://www.googleapis.com/auth/gmail.readonly',
         ],
         'AUTH_PARAMS': {
-            'access_type': 'online',
+            'access_type': 'offline',
+            'prompt': 'consent',
         },
     }
 }
+
+# Ensure tokens are stored
+SOCIALACCOUNT_STORE_TOKENS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
