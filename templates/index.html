@@ -4,18 +4,18 @@
 <head>
   {% load static %}
   <meta charset="utf-8">
-  <title>Eduverse Mail</title>
+  <title>Eduverse</title>
   <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
 
 <body>
-  <div class="gmail-container">
+  <div class="app-container">
     <!-- Header -->
-    <div class="gmail-header">
-      <div class="gmail-logo">
-        <h1>Eduverse Mail</h1>
+    <div class="app-header">
+      <div class="app-logo">
+        <h1>Eduverse</h1>
       </div>
-      <div class="gmail-user">
+      <div class="app-user">
         {% if user_data.picture %}
         <img src="{{ user_data.picture }}" alt="Profile" class="header-profile-pic">
         {% else %}
@@ -26,50 +26,330 @@
       </div>
     </div>
 
-    <div class="gmail-body">
-      <!-- Sidebar -->
-      <div class="gmail-sidebar">
+    <div class="app-body">
+      <!-- Sidebar Toggle Button -->
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+      </button>
 
-        <div class="sidebar-menu">
-          <div class="menu-item active">📥 Inbox</div>
+      <!-- Floating Sidebar -->
+      <div class="floating-sidebar" id="floating-sidebar">
+        <div class="sidebar-content">
+          <div class="nav-item active" data-tab="inbox">
+            <div class="nav-icon">📧</div>
+            <span class="nav-label">Inbox</span>
+            {% if emails %}
+            <div class="nav-count">{{ emails|length }}</div>
+            {% endif %}
+          </div>
+          <div class="nav-item" data-tab="pomodoro">
+            <div class="nav-icon">🍅</div>
+            <span class="nav-label">Pomodoro</span>
+          </div>
+          <div class="nav-item" data-tab="todo">
+            <div class="nav-icon">✓</div>
+            <span class="nav-label">To-Do</span>
+          </div>
         </div>
       </div>
 
-      <!-- Email List -->
-      <div class="gmail-content">
-        {% if emails %}
-        <div class="email-list-header">
-          <h2>Inbox ({{ emails|length }})</h2>
-        </div>
-        <div class="email-list">
-          {% for email in emails %}
-          <div class="email-row">
-            <div class="email-checkbox">
-              <input type="checkbox">
+      <!-- Sidebar Trigger Area -->
+      <div class="sidebar-trigger" id="sidebar-trigger"></div>
+
+      <!-- Main Content Area -->
+      <div class="main-content" id="main-content">
+        <!-- Inbox Tab -->
+        <div class="tab-content active" id="inbox-content">
+          {% if emails %}
+          <div class="gmail-header">
+            <div class="gmail-toolbar">
+              <div class="toolbar-left">
+                <button class="toolbar-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                  </svg>
+                </button>
+                <button class="toolbar-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                  </svg>
+                </button>
+                <button class="toolbar-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="toolbar-right">
+                <span class="email-count">1-{{ emails|length }} of {{ emails|length }}</span>
+                <button class="toolbar-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                  </svg>
+                </button>
+                <button class="toolbar-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div class="email-star">⭐</div>
-            <div class="email-sender">{{ email.sender|truncatechars:25 }}</div>
-            <div class="email-content">
-              <span class="email-subject">{{ email.subject|truncatechars:50 }}</span>
-              <span class="email-snippet"> - {{ email.snippet|truncatechars:80 }}</span>
-            </div>
-            <div class="email-date">{{ email.date|date:"M d" }}</div>
           </div>
-          {% endfor %}
+          <div class="gmail-email-list">
+            {% for email in emails %}
+            <div class="gmail-email-item">
+              <div class="email-checkbox">
+                <input type="checkbox" class="email-select">
+              </div>
+              <div class="email-star">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                </svg>
+              </div>
+              <div class="email-sender">{{ email.sender|truncatechars:20 }}</div>
+              <div class="email-content">
+                <div class="email-subject-line">
+                  <span class="email-subject">{{ email.subject|truncatechars:50 }}</span>
+                  <span class="email-snippet"> - {{ email.snippet|truncatechars:80 }}</span>
+                </div>
+              </div>
+              <div class="email-date">{{ email.date|date:"M d" }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="gmail-empty-state">
+            <div class="empty-icon">📧</div>
+            <h3>Your inbox is empty</h3>
+            <p>No new messages in your inbox.</p>
+          </div>
+          {% endif %}
         </div>
-        {% else %}
-        <div class="no-emails">
-          <div class="no-emails-icon">📧</div>
-          <h3>No emails found</h3>
-          <p>Your inbox is empty or Gmail access needs to be granted.</p>
-          <p class="help-text">Make sure you granted Gmail permissions when signing in.</p>
+
+        <!-- Pomodoro Tab -->
+        <div class="tab-content" id="pomodoro-content">
+          <div class="pomodoro-layout">
+            <!-- Focus Timer Card -->
+            <div class="timer-card focus-card" id="focus-card">
+              <div class="card-header">
+                <button class="back-btn" id="back-to-break">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                  </svg>
+                </button>
+                <div class="mode-dots">
+                  <div class="dot active"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                </div>
+              </div>
+              
+              <div class="timer-display">
+                <div class="timer-circle">
+                  <svg class="progress-svg" width="280" height="280">
+                    <circle class="progress-bg" cx="140" cy="140" r="120"/>
+                    <circle class="progress-bar focus-progress" cx="140" cy="140" r="120" id="focus-progress"/>
+                  </svg>
+                  <div class="timer-content">
+                    <div class="time" id="focus-time">25:00</div>
+                  </div>
+                  <div class="progress-dot" id="focus-dot"></div>
+                </div>
+              </div>
+
+              <div class="session-info">
+                <div class="session-title">Work Mode</div>
+                <div class="session-icon">💻</div>
+              </div>
+
+              <div class="timer-controls">
+                <button class="control-btn" id="focus-btn">
+                  <div class="btn-icon pause-icon">⏸</div>
+                  <span class="btn-label">Pause</span>
+                </button>
+              </div>
+
+              <div class="time-settings">
+                <label>Focus Time</label>
+                <input type="number" id="focus-minutes" min="1" max="60" value="25">
+                <span>min</span>
+              </div>
+            </div>
+
+            <!-- Break Timer Card -->
+            <div class="timer-card break-card" id="break-card">
+              <div class="card-header">
+                <button class="back-btn" id="back-to-focus">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                  </svg>
+                </button>
+                <div class="mode-dots">
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot active"></div>
+                </div>
+              </div>
+              
+              <div class="timer-display">
+                <div class="timer-circle">
+                  <svg class="progress-svg" width="280" height="280">
+                    <circle class="progress-bg" cx="140" cy="140" r="120"/>
+                    <circle class="progress-bar break-progress" cx="140" cy="140" r="120" id="break-progress"/>
+                  </svg>
+                  <div class="timer-content">
+                    <div class="time" id="break-time">05:00</div>
+                  </div>
+                  <div class="progress-dot" id="break-dot"></div>
+                </div>
+              </div>
+
+              <div class="session-info">
+                <div class="session-title">Rest</div>
+                <div class="session-icon">✂️</div>
+              </div>
+
+              <div class="timer-controls">
+                <button class="control-btn" id="break-btn">
+                  <div class="btn-icon play-icon">▶</div>
+                  <span class="btn-label">Resume</span>
+                </button>
+              </div>
+
+              <div class="time-settings">
+                <label>Break Time</label>
+                <input type="number" id="break-minutes" min="1" max="30" value="5">
+                <span>min</span>
+              </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="pomodoro-stats">
+              <div class="stat-item">
+                <div class="stat-number" id="completed-pomodoros">0</div>
+                <div class="stat-label">Completed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-number" id="current-streak">0</div>
+                <div class="stat-label">Streak</div>
+              </div>
+            </div>
+          </div>
         </div>
-        {% endif %}
+
+        <!-- To-Do Tab -->
+        <div class="tab-content" id="todo-content">
+          <div class="notion-todo-container">
+            <div class="todo-header">
+              <div class="todo-title">
+                <div class="title-icon">✓</div>
+                <h1>Task List</h1>
+              </div>
+              <p class="todo-subtitle">Use this template to track your personal tasks.</p>
+              
+              <div class="todo-instructions">
+                <p>Click <strong>+ New</strong> to create a new task directly on this board.</p>
+                <p>Move the to-do cards to the next section as you complete them or click the <span class="done-btn">Done!</span> button.</p>
+              </div>
+
+              <div class="todo-controls">
+                <div class="view-options">
+                  <span class="view-label">👥 All tasks grouped by status</span>
+                  <span class="view-label">📅 Tasks sorted by deadline</span>
+                  <span class="view-label">📋 Calendar view</span>
+                </div>
+                <div class="todo-actions">
+                  <button class="filter-btn">Filter</button>
+                  <button class="sort-btn">Sort ↕</button>
+                  <button class="add-task-btn" id="add-task-btn">+ New</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-board">
+              <div class="kanban-column">
+                <div class="column-header">
+                  <div class="column-info">
+                    <span class="column-icon">📋</span>
+                    <span class="column-title">To Do</span>
+                    <span class="column-count" id="not-started-count">3</span>
+                  </div>
+                </div>
+                <div class="task-list" id="not-started-tasks">
+                  <div class="task-placeholder">
+                    <p>Notion Tip: Add more details directly in this to-do's page! You can open any to-do and add images, links, and more. Learn more about different types of content blocks <a href="#">here</a>.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-header">
+                  <div class="column-info">
+                    <span class="column-icon">🔄</span>
+                    <span class="column-title">In progress</span>
+                    <span class="column-count" id="in-progress-count">2</span>
+                  </div>
+                </div>
+                <div class="task-list" id="in-progress-tasks">
+                  <!-- Tasks will be added here -->
+                </div>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-header">
+                  <div class="column-info">
+                    <span class="column-icon">✅</span>
+                    <span class="column-title">Done</span>
+                    <span class="column-count" id="done-count">1</span>
+                  </div>
+                </div>
+                <div class="task-list" id="done-tasks">
+                  <!-- Tasks will be added here -->
+                </div>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-header">
+                  <div class="column-info">
+                    <span class="column-icon">⭕</span>
+                    <span class="column-title">No Status</span>
+                    <span class="column-count" id="no-status-count">0</span>
+                  </div>
+                </div>
+                <div class="task-list" id="no-status-tasks">
+                  <!-- Tasks will be added here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-
+    <!-- Add Task Modal -->
+    <div class="modal" id="add-task-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add New Task</h3>
+          <button class="modal-close" id="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="task-title" placeholder="Task title..." class="input-field">
+          <textarea id="task-description" placeholder="Description (optional)..." class="input-field"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="cancel-task">Cancel</button>
+          <button class="btn-primary" id="save-task">Add Task</button>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <script src="{% static 'app.js' %}"></script>
 </body>
 
 </html>
