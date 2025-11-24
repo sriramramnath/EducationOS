@@ -153,6 +153,8 @@ SOCIALACCOUNT_PROVIDERS = {
             'profile',
             'email',
             'https://www.googleapis.com/auth/gmail.readonly',
+            'https://www.googleapis.com/auth/tasks',
+            'https://www.googleapis.com/auth/calendar.readonly',
         ],
         'AUTH_PARAMS': {
             'access_type': 'offline',
@@ -170,3 +172,42 @@ SOCIALACCOUNT_STORE_TOKENS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'django.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'Core': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

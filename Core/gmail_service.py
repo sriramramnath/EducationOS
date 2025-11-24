@@ -1,72 +1,17 @@
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from allauth.socialaccount.models import SocialToken, SocialApp
 import base64
-import email
 from datetime import datetime
+import logging
+
+from .google_client import build_google_service
+
+logger = logging.getLogger(__name__)
 
 
 class GmailService:
     def __init__(self, user):
         self.user = user
-        self.service = self._build_service()
-    
-    def _build_service(self):
-        """Build Gmail service using stored OAuth tokens"""
-        try:
-            # Get the social token from allauth - try different approaches
-            social_token = None
-            
-            # Try to get token by provider name
-            try:
-                social_token = SocialToken.objects.get(
-                    account__user=self.user,
-                    account__provider='google'
-                )
-            except SocialToken.DoesNotExist:
-                # Try to get token by provider ID (numeric)
-                try:
-                    social_token = SocialToken.objects.filter(
-                        account__user=self.user
-                    ).first()
-                except:
-                    pass
-            
-            if not social_token:
-                print("No social token found")
-                return None
-            
-            # Get the Google app credentials
-            try:
-                google_app = SocialApp.objects.get(provider='google')
-            except SocialApp.DoesNotExist:
-                # Try to get by ID if provider name doesn't work
-                google_app = SocialApp.objects.first()
-            
-            if not google_app:
-                print("No Google app found")
-                return None
-            
-            # Create credentials object
-            creds = Credentials(
-                token=social_token.token,
-                refresh_token=social_token.token_secret,
-                token_uri='https://oauth2.googleapis.com/token',
-                client_id=google_app.client_id,
-                client_secret=google_app.secret,
-            )
-            
-            print(f"Building Gmail service with token: {social_token.token[:20]}...")
-            
-            # Build and return Gmail service
-            return build('gmail', 'v1', credentials=creds)
-            
-        except Exception as e:
-            print(f"Error building Gmail service: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+        self.service = build_google_service(user, 'gmail', 'v1')
     
     def get_emails(self, max_results=10):
         """Fetch recent emails"""
@@ -99,7 +44,7 @@ class GmailService:
             return emails
             
         except HttpError as error:
-            print(f"Gmail API error: {error}")
+            logger.error(f"Gmail API error: {error}", exc_info=True)
             return []
     
     def _extract_email_data(self, message):
@@ -132,7 +77,7 @@ class GmailService:
             }
             
         except Exception as e:
-            print(f"Error extracting email data: {e}")
+            logger.error(f"Error extracting email data: {e}", exc_info=True)
             return None
     
     def _extract_body(self, payload):
@@ -160,5 +105,5 @@ class GmailService:
             results = self.service.users().labels().list(userId='me').execute()
             return results.get('labels', [])
         except HttpError as error:
-            print(f"Error getting labels: {error}")
+            logger.error(f"Error getting labels: {error}", exc_info=True)
             return []

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="utf-8">
+    <title>Page Not Found - Eduverse</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">Eduverse</div>
+        <h2 style="font-size: 48px; margin: 20px 0;">404</h2>
+        <p class="tagline">Page not found</p>
+        <p style="color: var(--text-secondary); margin-bottom: 32px;">
+            The page you're looking for doesn't exist.
+        </p>
+        <a href="{% url 'home' %}" class="google-btn-link">
+            <button type="button" class="google-btn">
+                Go to Home
+            </button>
+        </a>
+    </div>
+</body>
+</html>

@@ -1,354 +1,483 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html>
 
 <head>
   {% load static %}
   <meta charset="utf-8">
-  <title>Eduverse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduverse · Productivity cockpit</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'style.css' %}">
+  <link rel="stylesheet" href="{% static 'google-style.css' %}">
 </head>
 
-<body>
-  <div class="app-container">
-    <!-- Header -->
-    <div class="app-header">
+<body class="bg-canvas">
+  <div class="app-container container-xxl py-4">
+    <header class="app-header" role="banner">
       <div class="app-logo">
-        <h1>Eduverse</h1>
+        <div class="app-mark">EV</div>
+        <div>
+          <h1>Eduverse</h1>
+          <p class="app-subtitle">Unified flow for Gmail, Tasks & Calendar</p>
+        </div>
       </div>
-      <div class="app-user">
+      <nav class="app-user" aria-label="User navigation">
         {% if user_data.picture %}
-        <img src="{{ user_data.picture }}" alt="Profile" class="header-profile-pic">
+        <img src="{{ user_data.picture }}" alt="Profile picture" class="header-profile-pic">
         {% else %}
         <div class="header-profile-placeholder">{{ user_data.email|slice:":1"|upper }}</div>
         {% endif %}
-        <span class="header-email">{{ user_data.email }}</span>
-        <a href="{% url 'logout' %}" class="header-logout">Sign out</a>
-      </div>
-    </div>
-
-    <div class="app-body">
-      <!-- Sidebar Toggle Button -->
-      <button class="sidebar-toggle" id="sidebar-toggle">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-        </svg>
-      </button>
-
-      <!-- Floating Sidebar -->
-      <div class="floating-sidebar" id="floating-sidebar">
-        <div class="sidebar-content">
-          <div class="nav-item active" data-tab="inbox">
-            <div class="nav-icon">📧</div>
-            <span class="nav-label">Inbox</span>
-            {% if emails %}
-            <div class="nav-count">{{ emails|length }}</div>
-            {% endif %}
-          </div>
-          <div class="nav-item" data-tab="pomodoro">
-            <div class="nav-icon">🍅</div>
-            <span class="nav-label">Pomodoro</span>
-          </div>
-          <div class="nav-item" data-tab="todo">
-            <div class="nav-icon">✓</div>
-            <span class="nav-label">To-Do</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sidebar Trigger Area -->
-      <div class="sidebar-trigger" id="sidebar-trigger"></div>
-
-      <!-- Main Content Area -->
-      <div class="main-content" id="main-content">
-        <!-- Inbox Tab -->
-        <div class="tab-content active" id="inbox-content">
-          {% if emails %}
-          <div class="gmail-header">
-            <div class="gmail-toolbar">
-              <div class="toolbar-left">
-                <button class="toolbar-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-                  </svg>
-                </button>
-                <button class="toolbar-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                  </svg>
-                </button>
-                <button class="toolbar-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="toolbar-right">
-                <span class="email-count">1-{{ emails|length }} of {{ emails|length }}</span>
-                <button class="toolbar-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                  </svg>
-                </button>
-                <button class="toolbar-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="gmail-email-list">
-            {% for email in emails %}
-            <div class="gmail-email-item">
-              <div class="email-checkbox">
-                <input type="checkbox" class="email-select">
-              </div>
-              <div class="email-star">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                </svg>
-              </div>
-              <div class="email-sender">{{ email.sender|truncatechars:20 }}</div>
-              <div class="email-content">
-                <div class="email-subject-line">
-                  <span class="email-subject">{{ email.subject|truncatechars:50 }}</span>
-                  <span class="email-snippet"> - {{ email.snippet|truncatechars:80 }}</span>
-                </div>
-              </div>
-              <div class="email-date">{{ email.date|date:"M d" }}</div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="gmail-empty-state">
-            <div class="empty-icon">📧</div>
-            <h3>Your inbox is empty</h3>
-            <p>No new messages in your inbox.</p>
-          </div>
+        <div class="header-meta">
+          <span class="header-email">{{ user_data.email }}</span>
+          {% if user_data.verified_email %}
+          <span class="header-badge">Verified</span>
           {% endif %}
         </div>
+        <a href="{% url 'logout' %}" class="header-logout" aria-label="Sign out">Sign out</a>
+      </nav>
+    </header>
 
-        <!-- Pomodoro Tab -->
-        <div class="tab-content" id="pomodoro-content">
-          <div class="pomodoro-layout">
-            <!-- Focus Timer Card -->
-            <div class="timer-card focus-card" id="focus-card">
-              <div class="card-header">
-                <button class="back-btn" id="back-to-break">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                  </svg>
-                </button>
-                <div class="mode-dots">
-                  <div class="dot active"></div>
-                  <div class="dot"></div>
-                  <div class="dot"></div>
-                  <div class="dot"></div>
-                </div>
-              </div>
-              
-              <div class="timer-display">
-                <div class="timer-circle">
-                  <svg class="progress-svg" width="280" height="280">
-                    <circle class="progress-bg" cx="140" cy="140" r="120"/>
-                    <circle class="progress-bar focus-progress" cx="140" cy="140" r="120" id="focus-progress"/>
-                  </svg>
-                  <div class="timer-content">
-                    <div class="time" id="focus-time">25:00</div>
-                  </div>
-                  <div class="progress-dot" id="focus-dot"></div>
-                </div>
-              </div>
-
-              <div class="session-info">
-                <div class="session-title">Work Mode</div>
-                <div class="session-icon">💻</div>
-              </div>
-
-              <div class="timer-controls">
-                <button class="control-btn" id="focus-btn">
-                  <div class="btn-icon pause-icon">⏸</div>
-                  <span class="btn-label">Pause</span>
-                </button>
-              </div>
-
-              <div class="time-settings">
-                <label>Focus Time</label>
-                <input type="number" id="focus-minutes" min="1" max="60" value="25">
-                <span>min</span>
-              </div>
-            </div>
-
-            <!-- Break Timer Card -->
-            <div class="timer-card break-card" id="break-card">
-              <div class="card-header">
-                <button class="back-btn" id="back-to-focus">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                  </svg>
-                </button>
-                <div class="mode-dots">
-                  <div class="dot"></div>
-                  <div class="dot"></div>
-                  <div class="dot"></div>
-                  <div class="dot active"></div>
-                </div>
-              </div>
-              
-              <div class="timer-display">
-                <div class="timer-circle">
-                  <svg class="progress-svg" width="280" height="280">
-                    <circle class="progress-bg" cx="140" cy="140" r="120"/>
-                    <circle class="progress-bar break-progress" cx="140" cy="140" r="120" id="break-progress"/>
-                  </svg>
-                  <div class="timer-content">
-                    <div class="time" id="break-time">05:00</div>
-                  </div>
-                  <div class="progress-dot" id="break-dot"></div>
-                </div>
-              </div>
-
-              <div class="session-info">
-                <div class="session-title">Rest</div>
-                <div class="session-icon">✂️</div>
-              </div>
-
-              <div class="timer-controls">
-                <button class="control-btn" id="break-btn">
-                  <div class="btn-icon play-icon">▶</div>
-                  <span class="btn-label">Resume</span>
-                </button>
-              </div>
-
-              <div class="time-settings">
-                <label>Break Time</label>
-                <input type="number" id="break-minutes" min="1" max="30" value="5">
-                <span>min</span>
-              </div>
-            </div>
-
-            <!-- Stats Section -->
-            <div class="pomodoro-stats">
-              <div class="stat-item">
-                <div class="stat-number" id="completed-pomodoros">0</div>
-                <div class="stat-label">Completed</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-number" id="current-streak">0</div>
-                <div class="stat-label">Streak</div>
-              </div>
-            </div>
-          </div>
+    <main class="main-content" role="main">
+      <section class="hero-panel card border-0 shadow-soft" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <p class="hero-eyebrow">Daily snapshot</p>
+          <h2 class="hero-title" id="hero-heading">
+            {{ user_data.given_name|default:user_data.name|default:user_data.email }}, everything you need is here.
+          </h2>
+          <p class="hero-description">
+            One quiet surface that mirrors the craft of Apple, Google and Microsoft—simple cards, calm typography,
+            zero clutter.
+          </p>
         </div>
+      </section>
 
-        <!-- To-Do Tab -->
-        <div class="tab-content" id="todo-content">
-          <div class="notion-todo-container">
-            <div class="todo-header">
-              <div class="todo-title">
-                <div class="title-icon">✓</div>
-                <h1>Task List</h1>
-              </div>
-              <p class="todo-subtitle">Use this template to track your personal tasks.</p>
-              
-              <div class="todo-instructions">
-                <p>Click <strong>+ New</strong> to create a new task directly on this board.</p>
-                <p>Move the to-do cards to the next section as you complete them or click the <span class="done-btn">Done!</span> button.</p>
-              </div>
+      <section class="workspace">
+        <nav class="view-tabs nav nav-pills nav-fill" role="tablist" aria-label="Workspace sections">
+          <button type="button" class="view-tab nav-link active" role="tab" aria-selected="true"
+            data-tab-target="#tab-snapshot">
+            <span class="fw-semibold">Snapshot</span>
+            <small>Overview</small>
+          </button>
+          <button type="button" class="view-tab nav-link" role="tab" aria-selected="false" data-tab-target="#tab-inbox">
+            <span class="fw-semibold">Inbox</span>
+            <small>Gmail</small>
+          </button>
+          <button type="button" class="view-tab nav-link" role="tab" aria-selected="false" data-tab-target="#tab-tasks">
+            <span class="fw-semibold">Tasks</span>
+            <small>Google Tasks</small>
+          </button>
+          <button type="button" class="view-tab nav-link" role="tab" aria-selected="false"
+            data-tab-target="#tab-calendar">
+            <span class="fw-semibold">Calendar</span>
+            <small>30 days</small>
+          </button>
+          <button type="button" class="view-tab nav-link" role="tab" aria-selected="false" data-tab-target="#tab-focus">
+            <span class="fw-semibold">Focus</span>
+            <small>Pomodoro</small>
+          </button>
+        </nav>
 
-              <div class="todo-controls">
-                <div class="view-options">
-                  <span class="view-label">👥 All tasks grouped by status</span>
-                  <span class="view-label">📅 Tasks sorted by deadline</span>
-                  <span class="view-label">📋 Calendar view</span>
+        <div class="tab-panels">
+          <!-- Snapshot Tab -->
+          <article class="tab-panel active" id="tab-snapshot" role="tabpanel" aria-label="Snapshot panel">
+            <div class="panel-header compact">
+              <div>
+                <p class="panel-label">Snapshot</p>
+                <h3>Daily overview</h3>
+              </div>
+            </div>
+            <div id="snapshot-react" class="snapshot-react" aria-live="polite"></div>
+          </article>
+
+          <!-- Gmail Tab -->
+          <article class="tab-panel" id="tab-inbox" role="tabpanel" aria-label="Inbox panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-label">Inbox</p>
+                <h3>Latest threads</h3>
+              </div>
+              <button class="panel-link ghost" id="refresh-email-btn">Refresh</button>
+            </div>
+
+            <div class="permission-banner subtle" id="email-permission-banner" style="display:none;">
+              <div class="permission-banner-content">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                </svg>
+                <div class="permission-banner-text">
+                  <strong>Reconnect Gmail</strong>
+                  <p>Sign out and sign back in so Eduverse can pull your inbox again.</p>
                 </div>
-                <div class="todo-actions">
-                  <button class="filter-btn">Filter</button>
-                  <button class="sort-btn">Sort ↕</button>
-                  <button class="add-task-btn" id="add-task-btn">+ New</button>
-                </div>
+                <a href="{% url 'logout' %}" class="permission-banner-btn">Re-authenticate</a>
               </div>
             </div>
 
-            <div class="kanban-board">
-              <div class="kanban-column">
-                <div class="column-header">
-                  <div class="column-info">
-                    <span class="column-icon">📋</span>
-                    <span class="column-title">To Do</span>
-                    <span class="column-count" id="not-started-count">3</span>
-                  </div>
+            <div class="inbox-shell" id="inbox-shell">
+              <div class="email-list-pane">
+                <div class="skeleton-list" id="email-skeleton">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row"></div>
                 </div>
-                <div class="task-list" id="not-started-tasks">
-                  <div class="task-placeholder">
-                    <p>Notion Tip: Add more details directly in this to-do's page! You can open any to-do and add images, links, and more. Learn more about different types of content blocks <a href="#">here</a>.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="kanban-column">
-                <div class="column-header">
-                  <div class="column-info">
-                    <span class="column-icon">🔄</span>
-                    <span class="column-title">In progress</span>
-                    <span class="column-count" id="in-progress-count">2</span>
-                  </div>
-                </div>
-                <div class="task-list" id="in-progress-tasks">
-                  <!-- Tasks will be added here -->
+                <div class="gmail-email-list" id="email-list" aria-live="polite"></div>
+                <div class="gmail-empty-state" id="email-empty-state" style="display:none;">
+                  <div class="empty-icon">✨</div>
+                  <h3>Inbox zero feels good</h3>
+                  <p>Once a new email arrives the feed will update automatically.</p>
                 </div>
               </div>
+              <aside class="email-detail-pane hidden" id="email-detail-pane">
+              </aside>
+            </div>
+          </article>
 
-              <div class="kanban-column">
-                <div class="column-header">
-                  <div class="column-info">
-                    <span class="column-icon">✅</span>
-                    <span class="column-title">Done</span>
-                    <span class="column-count" id="done-count">1</span>
-                  </div>
-                </div>
-                <div class="task-list" id="done-tasks">
-                  <!-- Tasks will be added here -->
-                </div>
+          <!-- Tasks Tab -->
+          <article class="tab-panel" id="tab-tasks" role="tabpanel" aria-label="Tasks panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-label">Tasks</p>
+                <h3>Google Tasks</h3>
               </div>
-
-              <div class="kanban-column">
-                <div class="column-header">
-                  <div class="column-info">
-                    <span class="column-icon">⭕</span>
-                    <span class="column-title">No Status</span>
-                    <span class="column-count" id="no-status-count">0</span>
-                  </div>
-                </div>
-                <div class="task-list" id="no-status-tasks">
-                  <!-- Tasks will be added here -->
-                </div>
+              <div class="panel-actions">
+                <button class="panel-link ghost" id="refresh-tasks-btn">Refresh</button>
+                <button class="panel-link" id="add-task-btn">New task</button>
               </div>
             </div>
-          </div>
+
+            <div class="permission-banner subtle" id="tasks-permission-banner" style="display:none;">
+              <div class="permission-banner-content">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l5.59-5.59L18 10l-7 7z" />
+                </svg>
+                <div class="permission-banner-text">
+                  <strong>Tasks access missing</strong>
+                  <p>Sign out/in again so Google issues a Tasks + Calendar token.</p>
+                </div>
+                <a href="{% url 'logout' %}" class="permission-banner-btn">Reconnect Google</a>
+              </div>
+            </div>
+
+            <section class="gtasks-container">
+              <div class="gtasks-list" id="gtasks-list"></div>
+              <div class="gtasks-empty" id="tasks-empty-state" style="display:none;">
+                <p>No tasks yet. Capture one with the button above.</p>
+              </div>
+            </section>
+          </article>
+
+          <!-- Calendar Tab -->
+          <article class="tab-panel" id="tab-calendar" role="tabpanel" aria-label="Calendar panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-label">Calendar</p>
+                <h3>30-day horizon</h3>
+              </div>
+              <button class="panel-link ghost" id="refresh-calendar-btn">Refresh</button>
+            </div>
+
+            <div class="permission-banner subtle" id="calendar-permission-banner" style="display:none;">
+              <div class="permission-banner-content">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                </svg>
+                <div class="permission-banner-text">
+                  <strong>Calendar permission required</strong>
+                  <p>Google Calendar scope is missing. Re-authenticate to pull events.</p>
+                </div>
+                <a href="{% url 'logout' %}" class="permission-banner-btn">Re-authenticate</a>
+              </div>
+            </div>
+
+            <div class="data-surface">
+              <div class="skeleton-list" id="calendar-skeleton">
+                <div class="skeleton-row"></div>
+                <div class="skeleton-row"></div>
+              </div>
+              <div class="gcal-events-list" id="calendar-events"></div>
+              <div class="gcal-empty-state" id="calendar-empty-state" style="display:none;">
+                <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" opacity="0.2">
+                  <path
+                    d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
+                </svg>
+                <h3>No upcoming events</h3>
+                <p>Your next 30 days are clear. Add something in Google Calendar and refresh.</p>
+              </div>
+            </div>
+          </article>
+
+          <!-- Focus Tab -->
+          <article class="tab-panel" id="tab-focus" role="tabpanel" aria-label="Pomodoro panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-label">Focus</p>
+                <h3>Pomodoro cockpit</h3>
+              </div>
+            </div>
+
+            <div class="focus-grid">
+              <section class="focus-stack">
+                <div class="timer-card focus-card" id="focus-card">
+                  <div class="card-header">
+                    <button id="back-to-break" class="back-btn" aria-label="Switch to break">↺</button>
+                    <div class="mode-dots">
+                      <span class="dot active"></span>
+                      <span class="dot"></span>
+                    </div>
+                  </div>
+
+                  <div class="timer-display">
+                    <div class="timer-circle">
+                      <svg class="progress-svg" viewBox="0 0 300 300">
+                        <circle class="progress-bg" cx="140" cy="140" r="120"></circle>
+                        <circle class="focus-progress" id="focus-progress" cx="140" cy="140" r="120"></circle>
+                      </svg>
+                      <div class="progress-dot" id="focus-dot"></div>
+                      <div class="timer-content">
+                        <p class="time" id="focus-time">25:00</p>
+                        <span class="session-label">Focus session</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="session-info">
+                    <div class="session-icon">🔥</div>
+                    <p class="session-title">Deep work</p>
+                    <p class="session-copy">Stick with the sprint for a full 25 minutes.</p>
+                  </div>
+
+                  <div class="timer-controls">
+                    <button class="control-btn" id="focus-btn">
+                      <span class="btn-icon">▶</span>
+                      <span class="btn-label">Start</span>
+                    </button>
+                  </div>
+
+                  <div class="time-settings">
+                    Focus
+                    <input type="number" id="focus-minutes" value="25" min="1" max="60" aria-label="Focus minutes">
+                    Break
+                    <input type="number" id="break-minutes" value="5" min="1" max="30" aria-label="Break minutes">
+                  </div>
+                </div>
+
+                <div class="timer-card break-card" id="break-card">
+                  <div class="card-header">
+                    <button id="back-to-focus" class="back-btn" aria-label="Switch to focus">↺</button>
+                    <div class="mode-dots">
+                      <span class="dot"></span>
+                      <span class="dot active"></span>
+                    </div>
+                  </div>
+
+                  <div class="timer-display">
+                    <div class="timer-circle">
+                      <svg class="progress-svg" viewBox="0 0 300 300">
+                        <circle class="progress-bg" cx="140" cy="140" r="120"></circle>
+                        <circle class="break-progress" id="break-progress" cx="140" cy="140" r="120"></circle>
+                      </svg>
+                      <div class="progress-dot" id="break-dot"></div>
+                      <div class="timer-content">
+                        <p class="time" id="break-time">05:00</p>
+                        <span class="session-label">Break time</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="session-info">
+                    <div class="session-icon">🌿</div>
+                    <p class="session-title">Reset & breathe</p>
+                    <p class="session-copy">Move around, drink water and get ready for the next sprint.</p>
+                  </div>
+
+                  <div class="timer-controls">
+                    <button class="control-btn" id="break-btn">
+                      <span class="btn-icon">▶</span>
+                      <span class="btn-label">Start</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="focus-sidebar">
+                <div class="sidebar-card stats-card">
+                  <div class="stat-row">
+                    <p>Sessions today</p>
+                    <strong id="completed-pomodoros">0</strong>
+                  </div>
+                  <div class="stat-row">
+                    <p>Day streak</p>
+                    <strong id="current-streak">0</strong>
+                  </div>
+                  <div class="stat-row subtle">
+                    <p>Mode</p>
+                    <span id="focus-mode-label">Focused</span>
+                  </div>
+                </div>
+
+                <div class="sidebar-card agenda-card">
+                  <div class="agenda-header">
+                    <p class="panel-label">Upcoming sprints</p>
+                    <span>Auto-loop</span>
+                  </div>
+                  <ul class="agenda-list">
+                    <li>
+                      <div>
+                        <strong>Inbox triage</strong>
+                        <p>Clear flagged mail in 1 Pomodoro</p>
+                      </div>
+                      <span>Now</span>
+                    </li>
+                    <li>
+                      <div>
+                        <strong>Design review</strong>
+                        <p>Summarize feedback for tomorrow</p>
+                      </div>
+                      <span>14:30</span>
+                    </li>
+                    <li>
+                      <div>
+                        <strong>Break ritual</strong>
+                        <p>Stretch + refill water</p>
+                      </div>
+                      <span>Next</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div class="sidebar-card ambient-card">
+                  <div>
+                    <p class="panel-label">Ambient mode</p>
+                    <h4>Soft rain & piano</h4>
+                    <p class="ambient-copy">Pair the timer with an unobtrusive loop. Keeps you in the zone.</p>
+                  </div>
+                  <button class="ambient-toggle" id="ambient-toggle">Play soundscape</button>
+                </div>
+              </aside>
+            </div>
+          </article>
         </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="gtasks-modal" id="add-task-modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <div class="gtasks-modal-content">
+      <div class="gtasks-modal-header">
+        <input type="text" id="task-title" placeholder="Title" class="gtasks-title-input" aria-label="Task title"
+          required autofocus>
+        <button class="gtasks-modal-close" id="close-modal" aria-label="Close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          </svg>
+        </button>
       </div>
-    </div>
-
-    <!-- Add Task Modal -->
-    <div class="modal" id="add-task-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Add New Task</h3>
-          <button class="modal-close" id="close-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <input type="text" id="task-title" placeholder="Task title..." class="input-field">
-          <textarea id="task-description" placeholder="Description (optional)..." class="input-field"></textarea>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-secondary" id="cancel-task">Cancel</button>
-          <button class="btn-primary" id="save-task">Add Task</button>
-        </div>
+      <div class="gtasks-modal-body">
+        <textarea id="task-description" placeholder="Add details" class="gtasks-details-input"
+          aria-label="Task description"></textarea>
+      </div>
+      <div class="gtasks-modal-footer">
+        <button class="gtasks-btn-text" id="cancel-task">Cancel</button>
+        <button class="gtasks-btn-primary" id="save-task">Save</button>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    {% verbatim %}
+    const StatTile = ({ label, value, meta }) => (
+      <div className="col-6">
+        <div className="react-stat">
+          <p className="react-stat-label">{label}</p>
+          <p className="react-stat-value">{value}</p>
+          <span className="react-stat-meta">{meta}</span>
+        </div>
+      </div>
+    );
+
+    const SnapshotPanel = ({ emails = [], tasks = [], events = [] }) => {
+      const activeTasks = tasks.filter((task) => {
+        const status = (task.status || '').toLowerCase();
+        return status !== 'completed' && status !== 'done';
+      }).length;
+
+      const stats = [
+        { label: 'Inbox', value: emails.length, meta: 'messages synced' },
+        { label: 'Active tasks', value: activeTasks, meta: 'need action' },
+        { label: 'Total tasks', value: tasks.length, meta: 'Google Tasks' },
+        { label: 'Events', value: events.length, meta: 'next 30 days' },
+      ];
+
+      const baseline = [32, 58, 44, 72, 55, 80, 60];
+      const load = emails.length + tasks.length + events.length;
+      const sparkData = baseline.map((value, index) => {
+        const adjustment = (load % 12) - 6 + index;
+        return Math.min(95, Math.max(12, value + adjustment));
+      });
+      const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      return (
+        <div className="row g-4 react-grid">
+          <div className="col-12 col-lg-7">
+            <div className="react-panel h-100">
+              <div className="react-panel-header mb-3">
+                <div>
+                  <p className="panel-label mb-1">Today</p>
+                  <h4 className="react-panel-title">Signal at a glance</h4>
+                </div>
+                <span className="react-panel-meta text-uppercase">API live feed</span>
+              </div>
+              <div className="row g-3">
+                {stats.map((stat) => (
+                  <StatTile key={stat.label} {...stat} />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-lg-5">
+            <div className="react-panel h-100">
+              <div className="react-panel-header mb-3">
+                <div>
+                  <p className="panel-label mb-1">Momentum</p>
+                  <h4 className="react-panel-title">Focus trend</h4>
+                </div>
+                <span className="react-panel-meta">Last 7 days</span>
+              </div>
+              <div className="spark-stack">
+                {sparkData.map((value, index) => (
+                  <div className="spark-bar" key={dayLabels[index]}>
+                    <div className="spark-bar-fill" style={{ height: `${value}%` }}></div>
+                    <small>{dayLabels[index]}</small>
+                  </div>
+                ))}
+              </div>
+              <p className="spark-caption text-muted mt-3">
+                Generated from the latest Gmail, Tasks and Calendar signals.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    window.renderSnapshotReact = function (payload) {
+      const target = document.getElementById('snapshot-react');
+      if (!target) return;
+      if (!target._reactRoot) {
+        target._reactRoot = ReactDOM.createRoot(target);
+      }
+      target._reactRoot.render(
+        <SnapshotPanel emails={payload.emails} tasks={payload.tasks} events={payload.events} />
+      );
+    };
+    {% endverbatim %}
+  </script>
   <script src="{% static 'app.js' %}"></script>
 </body>
 
