@@ -1,7 +1,9 @@
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from allauth.socialaccount.models import SocialToken, SocialApp
+from datetime import datetime
 import logging
-
-from .google_client import build_google_service
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +11,7 @@ logger = logging.getLogger(__name__)
 class GoogleTasksService:
     def __init__(self, user):
         self.user = user
-        self.service = build_google_service(user, 'tasks', 'v1')
+        self.service = self._build_service()
     
     def _format_task(self, task):
         """Format a Google Tasks task to our app format"""
@@ -36,6 +38,38 @@ class GoogleTasksService:
             'completed': task.get('completed'),
             'updated': task.get('updated'),
         }
+    
+    def _build_service(self):
+        """Build Google Tasks service using stored OAuth tokens"""
+        try:
+            social_token = SocialToken.objects.filter(
+                account__user=self.user,
+                account__provider='google'
+            ).first()
+            
+            if not social_token:
+                logger.warning(f"No social token found for user {self.user.email}")
+                return None
+            
+            google_app = SocialApp.objects.filter(provider='google').first()
+            if not google_app:
+                logger.error("No Google app configured in Django admin")
+                return None
+            
+            creds = Credentials(
+                token=social_token.token,
+                refresh_token=social_token.token_secret,
+                token_uri='https://oauth2.googleapis.com/token',
+                client_id=google_app.client_id,
+                client_secret=google_app.secret,
+            )
+            
+            logger.info(f"Building Google Tasks service for user {self.user.email}")
+            return build('tasks', 'v1', credentials=creds)
+            
+        except Exception as e:
+            logger.error(f"Error building Google Tasks service: {e}", exc_info=True)
+            return None
     
     def get_task_lists(self):
         """Get all task lists"""

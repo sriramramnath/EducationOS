@@ -1,9 +1,7 @@
 import logging
 from typing import Optional
-from datetime import timezone as dt_timezone
 
 from allauth.socialaccount.models import SocialApp, SocialToken
-from django.utils import timezone
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
@@ -16,48 +14,36 @@ def _get_social_token(user) -> Optional[SocialToken]:
     """
     Fetch the most relevant social token for the provided user.
 
-    We first prefer tokens whose associated SocialAccount provider is google.
-    If that data was imported incorrectly, we fall back to tokens whose
-    SocialApp provider is google, and finally to any token available.
+    We prefer tokens whose associated app has the Google provider. If the
+    SocialAccount provider string was saved incorrectly (observed as a numeric
+    value in some databases), we gracefully fall back to whichever token exists
+    for the user so that integrations continue to work.
     """
-    base_qs = (
+    token = (
+        SocialToken.objects.filter(account__user=user, app__provider='google')
+        .select_related('app', 'account')
+        .order_by('-id')
+        .first()
+    )
+
+    if token:
+        return token
+
+    fallback = (
         SocialToken.objects.filter(account__user=user)
         .select_related('app', 'account')
         .order_by('-id')
+        .first()
     )
 
-    token = base_qs.filter(account__provider='google').first()
-    if token:
-        return token
-
-    token = base_qs.filter(app__provider='google').first()
-    if token:
-        logger.warning(
-            "SocialAccount provider mismatch for %s; using token matched via SocialApp.",
-            user.email,
-        )
-        return token
-
-    fallback = base_qs.first()
     if fallback:
         logger.warning(
             "Falling back to first available social token for %s; "
-            "no Google-specific token could be found.",
+            "the social account provider value appears to be inconsistent.",
             user.email,
         )
 
     return fallback
-
-
-def _normalize_expiry(value):
-    """Return a naive UTC datetime compatible with google-auth."""
-    if not value:
-        return None
-    if timezone.is_naive(value):
-        aware = timezone.make_aware(value, dt_timezone.utc)
-    else:
-        aware = value.astimezone(dt_timezone.utc)
-    return aware.replace(tzinfo=None)
 
 
 def build_google_credentials(user) -> Optional[Credentials]:
@@ -81,9 +67,8 @@ def build_google_credentials(user) -> Optional[Credentials]:
         client_secret=google_app.secret,
     )
 
-    expiry = _normalize_expiry(social_token.expires_at)
-    if expiry:
-        creds.expiry = expiry
+    if social_token.expires_at:
+        creds.expiry = social_token.expires_at
 
     return creds
 

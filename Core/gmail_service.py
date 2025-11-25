@@ -1,9 +1,11 @@
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from allauth.socialaccount.models import SocialToken, SocialApp
 import base64
+import email
 from datetime import datetime
 import logging
-
-from .google_client import build_google_service
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +13,58 @@ logger = logging.getLogger(__name__)
 class GmailService:
     def __init__(self, user):
         self.user = user
-        self.service = build_google_service(user, 'gmail', 'v1')
+        self.service = self._build_service()
+    
+    def _build_service(self):
+        """Build Gmail service using stored OAuth tokens"""
+        try:
+            # Get the social token from allauth - try different approaches
+            social_token = None
+            
+            # Try to get token by provider name
+            try:
+                social_token = SocialToken.objects.get(
+                    account__user=self.user,
+                    account__provider='google'
+                )
+            except SocialToken.DoesNotExist:
+                # Try to get token by provider ID (numeric)
+                social_token = SocialToken.objects.filter(
+                    account__user=self.user
+                ).first()
+            
+            if not social_token:
+                logger.warning(f"No social token found for user {self.user.email}")
+                return None
+            
+            # Get the Google app credentials
+            try:
+                google_app = SocialApp.objects.get(provider='google')
+            except SocialApp.DoesNotExist:
+                # Try to get by ID if provider name doesn't work
+                google_app = SocialApp.objects.first()
+            
+            if not google_app:
+                logger.error("No Google app configured in Django admin")
+                return None
+            
+            # Create credentials object
+            creds = Credentials(
+                token=social_token.token,
+                refresh_token=social_token.token_secret,
+                token_uri='https://oauth2.googleapis.com/token',
+                client_id=google_app.client_id,
+                client_secret=google_app.secret,
+            )
+            
+            logger.info(f"Building Gmail service for user {self.user.email}")
+            
+            # Build and return Gmail service
+            return build('gmail', 'v1', credentials=creds)
+            
+        except Exception as e:
+            logger.error(f"Error building Gmail service: {e}", exc_info=True)
+            return None
     
     def get_emails(self, max_results=10):
         """Fetch recent emails"""

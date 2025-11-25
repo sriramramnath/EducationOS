@@ -1,8 +1,9 @@
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from allauth.socialaccount.models import SocialToken, SocialApp
 from datetime import datetime, timedelta
 import logging
-
-from .google_client import build_google_service
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +11,39 @@ logger = logging.getLogger(__name__)
 class GoogleCalendarService:
     def __init__(self, user):
         self.user = user
-        self.service = build_google_service(user, 'calendar', 'v3')
+        self.service = self._build_service()
+    
+    def _build_service(self):
+        """Build Google Calendar service using stored OAuth tokens"""
+        try:
+            social_token = SocialToken.objects.filter(
+                account__user=self.user,
+                account__provider='google'
+            ).first()
+            
+            if not social_token:
+                logger.warning(f"No social token found for user {self.user.email}")
+                return None
+            
+            google_app = SocialApp.objects.filter(provider='google').first()
+            if not google_app:
+                logger.error("No Google app configured in Django admin")
+                return None
+            
+            creds = Credentials(
+                token=social_token.token,
+                refresh_token=social_token.token_secret,
+                token_uri='https://oauth2.googleapis.com/token',
+                client_id=google_app.client_id,
+                client_secret=google_app.secret,
+            )
+            
+            logger.info(f"Building Google Calendar service for user {self.user.email}")
+            return build('calendar', 'v3', credentials=creds)
+            
+        except Exception as e:
+            logger.error(f"Error building Google Calendar service: {e}", exc_info=True)
+            return None
     
     def get_calendars(self):
         """Get all calendars"""

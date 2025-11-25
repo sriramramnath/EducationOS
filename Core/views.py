@@ -5,7 +5,6 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
 from datetime import datetime
-from allauth.socialaccount.models import SocialAccount
 from .gmail_service import GmailService
 from .google_tasks_service import GoogleTasksService
 from .google_calendar_service import GoogleCalendarService
@@ -16,41 +15,87 @@ logger = logging.getLogger(__name__)
 @login_required
 def Home(request):
     # Get user's profile picture and email from Google OAuth
-
-    user_data = {
-        'email': request.user.email,
-        'name': request.user.get_full_name(),
-        'given_name': request.user.first_name,
-        'family_name': request.user.last_name,
-        'picture': '',
-        'verified_email': False,
-        'locale': '',
-    }
-
+    from allauth.socialaccount.models import SocialAccount
+    
+    # Default values
+    user_data = {}
+    emails = []
+    tasks = []
+    calendar_events = []
+    
     try:
-        social_account = SocialAccount.objects.filter(user=request.user).first()  # type: ignore[attr-defined]
+        # Get the social account data - try by user first (provider ID might be numeric)
+        social_account = SocialAccount.objects.filter(user=request.user).first()
+        
         if social_account:
-            extra_data = social_account.extra_data or {}
-            user_data.update({
-                'email': extra_data.get('email', user_data['email']),
-                'name': extra_data.get('name', user_data['name']),
-                'given_name': extra_data.get('given_name', user_data['given_name']),
-                'family_name': extra_data.get('family_name', user_data['family_name']),
-                'picture': extra_data.get('picture', user_data['picture']),
-                'verified_email': extra_data.get('email_verified', user_data['verified_email']),
-                'locale': extra_data.get('locale', user_data['locale']),
-            })
-    except Exception as exc:  # pragma: no cover - defensive; we still render the dashboard
-        logger.warning("Unable to load social profile for %s: %s", request.user.email, exc, exc_info=True)
+            extra_data = social_account.extra_data
+            
+            # Store ALL data from Google
+            all_data = extra_data
+            
+            # Extract all available data from Google
+            user_data = {
+                'email': extra_data.get('email', request.user.email),
+                'name': extra_data.get('name', ''),
+                'given_name': extra_data.get('given_name', ''),
+                'family_name': extra_data.get('family_name', ''),
+                'picture': extra_data.get('picture', ''),
+                'verified_email': extra_data.get('email_verified', False),
+                'locale': extra_data.get('locale', ''),
+            }
+            
+            # Try to fetch Gmail emails
+            try:
+                gmail_service = GmailService(request.user)
+                emails = gmail_service.get_emails(10)
+                logger.info(f"Fetched {len(emails)} emails for user {request.user.email}")
+            except Exception as e:
+                logger.error(f"Error fetching emails for user {request.user.email}: {e}", exc_info=True)
+                emails = []
+            
+            # Try to fetch Google Tasks
+            try:
+                tasks_service = GoogleTasksService(request.user)
+                tasks = tasks_service.get_tasks()
+                logger.info(f"Fetched {len(tasks)} tasks for user {request.user.email}")
+            except Exception as e:
+                logger.error(f"Error fetching tasks for user {request.user.email}: {e}", exc_info=True)
+            
+            # Try to fetch Google Calendar events
+            try:
+                calendar_service = GoogleCalendarService(request.user)
+                calendar_events = calendar_service.get_upcoming_events(max_results=20, days_ahead=30)
+                logger.info(f"Fetched {len(calendar_events)} calendar events for user {request.user.email}")
+            except Exception as e:
+                logger.error(f"Error fetching calendar events for user {request.user.email}: {e}", exc_info=True)
+        else:
+            raise SocialAccount.DoesNotExist
+        
+    except (SocialAccount.DoesNotExist, AttributeError):
+        user_data = {
+            'email': request.user.email,
+            'name': request.user.get_full_name(),
+            'picture': '',
+        }
+
+    serialized_emails = []
+    for email in emails:
+        email_copy = email.copy()
+        email_date = email_copy.get('date')
+        if isinstance(email_date, datetime):
+            email_copy['date'] = email_date.isoformat()
+        serialized_emails.append(email_copy)
+
+    initial_payload = {
+        'user': user_data,
+        'emails': serialized_emails,
+        'tasks': tasks,
+        'events': calendar_events,
+    }
 
     context = {
         'user_data': user_data,
-        'stats': {
-            'emails': 0,
-            'tasks_total': 0,
-            'tasks_active': 0,
-            'events': 0,
-        },
+        'initial_payload': initial_payload,
     }
 
     return render(request, 'index.html', context)
@@ -108,13 +153,6 @@ def update_task(request, task_id):
         status = data.get('status')
         
         tasks_service = GoogleTasksService(request.user)
-        
-        if not tasks_service.service:
-            return JsonResponse({
-                'error': 'Google Tasks not connected. Please sign out and sign in again to grant Tasks permission.',
-                'needs_reauth': True
-            }, status=403)
-        
         result = tasks_service.update_task(task_id, title, description, status)
         
         if result:
@@ -133,13 +171,6 @@ def delete_task(request, task_id):
     """Delete a task from Google Tasks"""
     try:
         tasks_service = GoogleTasksService(request.user)
-        
-        if not tasks_service.service:
-            return JsonResponse({
-                'error': 'Google Tasks not connected. Please sign out and sign in again to grant Tasks permission.',
-                'needs_reauth': True
-            }, status=403)
-        
         success = tasks_service.delete_task(task_id)
         
         if success:
@@ -157,8 +188,7 @@ def get_tasks(request):
     """Get all tasks from Google Tasks"""
     try:
         tasks_service = GoogleTasksService(request.user)
-        
-        # Check if service was built successfully
+
         if not tasks_service.service:
             return JsonResponse({
                 'error': 'Google Tasks not connected. Please sign out and sign in again to grant Tasks permission.',
@@ -174,7 +204,7 @@ def get_tasks(request):
 
 @login_required
 def get_emails(request):
-    """Expose recent Gmail messages via JSON so the UI can stay API-driven."""
+    """Expose recent Gmail messages via JSON."""
     try:
         gmail_service = GmailService(request.user)
         if not gmail_service.service:
