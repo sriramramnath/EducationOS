@@ -16,16 +16,32 @@ class GoogleCalendarService:
     def _build_service(self):
         """Build Google Calendar service using stored OAuth tokens"""
         try:
-            social_token = SocialToken.objects.filter(
-                account__user=self.user,
-                account__provider='google'
-            ).first()
+            # Get the social token from allauth - try different approaches
+            social_token = None
+            
+            # Try to get token by provider name
+            try:
+                social_token = SocialToken.objects.get(
+                    account__user=self.user,
+                    account__provider='google'
+                )
+            except SocialToken.DoesNotExist:
+                # Try to get token by provider ID (numeric) - fallback
+                social_token = SocialToken.objects.filter(
+                    account__user=self.user
+                ).first()
             
             if not social_token:
                 logger.warning(f"No social token found for user {self.user.email}")
                 return None
             
-            google_app = SocialApp.objects.filter(provider='google').first()
+            # Get the Google app credentials
+            try:
+                google_app = SocialApp.objects.get(provider='google')
+            except SocialApp.DoesNotExist:
+                # Try to get by ID if provider name doesn't work
+                google_app = SocialApp.objects.first()
+            
             if not google_app:
                 logger.error("No Google app configured in Django admin")
                 return None
