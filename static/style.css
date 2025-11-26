@@ -2270,3 +2270,156 @@ body {
   background: var(--accent-blue);
   color: white;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Quick Actions Panel
+   ───────────────────────────────────────────────────────────────────────────── */
+.quick-actions__toggle {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all var(--transition-fast);
+}
+
+.quick-actions__toggle:hover {
+  background: var(--accent-blue-hover);
+  transform: scale(1.1);
+  box-shadow: 0 12px 20px -5px rgba(59, 130, 246, 0.4);
+}
+
+.quick-actions__panel {
+  position: fixed;
+  bottom: 5rem;
+  right: 2rem;
+  width: 280px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.quick-actions__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.quick-actions__header h5 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.quick-actions__list {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+}
+
+.quick-actions__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  width: 100%;
+}
+
+.quick-actions__item:hover {
+  background: var(--bg-elevated);
+}
+
+.quick-actions__item--primary {
+  color: var(--accent-blue);
+}
+
+.quick-actions__item--blue {
+  color: var(--accent-blue);
+}
+
+.quick-actions__item--teal {
+  color: var(--accent-teal);
+}
+
+.quick-actions__item--orange {
+  color: var(--accent-orange);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Keyboard Shortcuts
+   ───────────────────────────────────────────────────────────────────────────── */
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.shortcut-key {
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+  color: var(--text-primary);
+  min-width: 24px;
+  text-align: center;
+}
+
+.shortcut-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .quick-actions__toggle {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 48px;
+    height: 48px;
+  }
+  
+  .quick-actions__panel {
+    bottom: 4.5rem;
+    right: 1.5rem;
+    width: 240px;
+  }
+}

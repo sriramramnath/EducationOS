@@ -200,7 +200,7 @@ const SearchResults = ({ query, emails, tasks, onClose, onNavigate }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Header Component
 // ─────────────────────────────────────────────────────────────────────────────
-const Header = ({ user, onSearch }) => {
+const Header = ({ user, onSearch, searchInputRef }) => {
   const initials = user.givenName ? user.givenName[0].toUpperCase() : user.email[0]?.toUpperCase() || '?';
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -221,9 +221,10 @@ const Header = ({ user, onSearch }) => {
             <div className="header-search">
               <Icon name="search" size={16} className="header-search__icon" />
               <input
+                ref={searchInputRef}
                 type="text"
                 className="header-search__input"
-                placeholder="Search emails, tasks, events..."
+                placeholder="Search emails, tasks, events... (⌘K)"
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
@@ -244,6 +245,105 @@ const Header = ({ user, onSearch }) => {
         </div>
       </div>
     </header>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quick Actions Panel
+// ─────────────────────────────────────────────────────────────────────────────
+const QuickActions = ({ onNavigate, onCreateTask }) => {
+  const [showPanel, setShowPanel] = useState(false);
+  
+  const actions = [
+    { icon: 'plus-circle', label: 'New Task', onClick: () => onCreateTask(), color: 'primary' },
+    { icon: 'envelope-plus', label: 'Compose', onClick: () => {}, color: 'blue' },
+    { icon: 'calendar-plus', label: 'New Event', onClick: () => onNavigate('calendar'), color: 'teal' },
+    { icon: 'bullseye', label: 'Start Focus', onClick: () => onNavigate('focus'), color: 'orange' },
+  ];
+  
+  return (
+    <>
+      <button 
+        className="quick-actions__toggle"
+        onClick={() => setShowPanel(!showPanel)}
+        title="Quick Actions (?)"
+      >
+        <Icon name={showPanel ? 'x-lg' : 'lightning-charge-fill'} size={20} />
+      </button>
+      {showPanel && (
+        <div className="quick-actions__panel">
+          <div className="quick-actions__header">
+            <h5>Quick Actions</h5>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowPanel(false)}>
+              <Icon name="x-lg" size={14} />
+            </button>
+          </div>
+          <div className="quick-actions__list">
+            {actions.map((action, idx) => (
+              <button
+                key={idx}
+                className={`quick-actions__item quick-actions__item--${action.color}`}
+                onClick={() => {
+                  action.onClick();
+                  setShowPanel(false);
+                }}
+              >
+                <Icon name={action.icon} size={20} />
+                <span>{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Keyboard Shortcuts Help
+// ─────────────────────────────────────────────────────────────────────────────
+const KeyboardShortcuts = ({ show, onClose }) => {
+  if (!show) return null;
+  
+  const shortcuts = [
+    { keys: ['⌘', 'K'], description: 'Focus search bar' },
+    { keys: ['Esc'], description: 'Close modals/search' },
+    { keys: ['1'], description: 'Go to Overview' },
+    { keys: ['2'], description: 'Go to Inbox' },
+    { keys: ['3'], description: 'Go to Tasks' },
+    { keys: ['4'], description: 'Go to Calendar' },
+    { keys: ['5'], description: 'Go to Focus' },
+    { keys: ['?'], description: 'Show keyboard shortcuts' },
+  ];
+  
+  return (
+    <div className="modal-backdrop show" onClick={onClose}>
+      <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">
+              <Icon name="keyboard" size={18} className="me-2" />
+              Keyboard Shortcuts
+            </h5>
+            <button className="btn-close" onClick={onClose}></button>
+          </div>
+          <div className="modal-body">
+            <div className="shortcuts-list">
+              {shortcuts.map((shortcut, idx) => (
+                <div key={idx} className="shortcut-item">
+                  <div className="shortcut-keys">
+                    {shortcut.keys.map((key, kIdx) => (
+                      <kbd key={kIdx} className="shortcut-key">{key}</kbd>
+                    ))}
+                  </div>
+                  <span className="shortcut-desc">{shortcut.description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -601,6 +701,9 @@ const OverviewTab = ({ emails, tasks, events, pomodoroCount, focusMins, onNaviga
 // ─────────────────────────────────────────────────────────────────────────────
 const InboxTab = ({ emails, loading, onRefresh }) => {
   const [selectedEmail, setSelectedEmail] = useState(null);
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'sender', 'subject'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
+  const [filterSender, setFilterSender] = useState('');
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -632,6 +735,46 @@ const InboxTab = ({ emails, loading, onRefresh }) => {
     const hash = (sender || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
   };
+
+  // Filter and sort emails
+  const filteredAndSortedEmails = useMemo(() => {
+    let filtered = [...emails];
+    
+    // Filter by sender
+    if (filterSender) {
+      filtered = filtered.filter(email => 
+        (email.sender || '').toLowerCase().includes(filterSender.toLowerCase())
+      );
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'sender':
+          aVal = (a.sender || '').toLowerCase();
+          bVal = (b.sender || '').toLowerCase();
+          break;
+        case 'subject':
+          aVal = (a.subject || '').toLowerCase();
+          bVal = (b.subject || '').toLowerCase();
+          break;
+        case 'date':
+        default:
+          aVal = new Date(a.date || 0).getTime();
+          bVal = new Date(b.date || 0).getTime();
+          break;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+    
+    return filtered;
+  }, [emails, sortBy, sortOrder, filterSender]);
 
   return (
     <div className="container-fluid px-4 py-4">
@@ -678,7 +821,30 @@ const InboxTab = ({ emails, loading, onRefresh }) => {
           <div className="panel">
             <div className="panel__header">
               <h3 className="panel__title">Messages</h3>
-              <span className="badge bg-primary">{emails.length}</span>
+              <div className="d-flex align-items-center gap-2">
+                <div className="dropdown">
+                  <button className="btn btn-ghost btn-sm" data-bs-toggle="dropdown">
+                    <Icon name="funnel" size={14} className="me-1" />
+                    Sort: {sortBy}
+                    <Icon name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={12} className="ms-1" />
+                  </button>
+                  <ul className="dropdown-menu dropdown-menu-end">
+                    <li><button className="dropdown-item" onClick={() => { setSortBy('date'); setSortOrder('desc'); }}>
+                      <Icon name="calendar" size={14} className="me-2" />Date (Newest)
+                    </button></li>
+                    <li><button className="dropdown-item" onClick={() => { setSortBy('date'); setSortOrder('asc'); }}>
+                      <Icon name="calendar" size={14} className="me-2" />Date (Oldest)
+                    </button></li>
+                    <li><button className="dropdown-item" onClick={() => { setSortBy('sender'); setSortOrder('asc'); }}>
+                      <Icon name="person" size={14} className="me-2" />Sender (A-Z)
+                    </button></li>
+                    <li><button className="dropdown-item" onClick={() => { setSortBy('subject'); setSortOrder('asc'); }}>
+                      <Icon name="file-text" size={14} className="me-2" />Subject (A-Z)
+                    </button></li>
+                  </ul>
+                </div>
+                <span className="badge bg-primary">{filteredAndSortedEmails.length}</span>
+              </div>
             </div>
             <div className="panel__body p-0">
               {loading && emails.length === 0 ? (
@@ -688,15 +854,15 @@ const InboxTab = ({ emails, loading, onRefresh }) => {
                   </div>
                   <span className="ms-2">Loading emails...</span>
                 </div>
-              ) : emails.length === 0 ? (
+              ) : filteredAndSortedEmails.length === 0 ? (
                 <div className="empty-state">
                   <Icon name="inbox" size={48} />
-                  <h4>All caught up!</h4>
-                  <p>No emails in your inbox</p>
+                  <h4>No emails found</h4>
+                  <p>{filterSender ? 'Try adjusting your filter' : 'No emails in your inbox'}</p>
                 </div>
               ) : (
                 <div className="email-list-container">
-                  {emails.map(email => (
+                  {filteredAndSortedEmails.map(email => (
                     <div
                       key={email.id}
                       className={`email-item ${selectedEmail?.id === email.id ? 'email-item--active' : ''}`}
@@ -777,12 +943,39 @@ const TasksTab = ({ tasks, loading, onRefresh, onCreateTask, onUpdateTask, onDel
   const [creating, setCreating] = useState(false);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
+  const [taskFilter, setTaskFilter] = useState('all'); // 'all', 'not-started', 'in-progress', 'done'
+  const [taskSort, setTaskSort] = useState('title'); // 'title', 'status', 'created'
 
   const columns = [
     { id: 'not-started', label: 'To Do', icon: 'circle', color: 'secondary', accent: 'purple' },
     { id: 'in-progress', label: 'In Progress', icon: 'play-circle-fill', color: 'primary', accent: 'blue' },
     { id: 'done', label: 'Done', icon: 'check-circle-fill', color: 'success', accent: 'teal' }
   ];
+
+  // Filter and sort tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    let filtered = [...tasks];
+    
+    // Filter by status
+    if (taskFilter !== 'all') {
+      filtered = filtered.filter(t => t.status === taskFilter);
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      switch (taskSort) {
+        case 'title':
+          return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+        case 'status':
+          const statusOrder = { 'not-started': 0, 'in-progress': 1, 'done': 2 };
+          return statusOrder[a.status] - statusOrder[b.status];
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [tasks, taskFilter, taskSort]);
 
   const todoCount = tasks.filter(t => t.status === 'not-started').length;
   const inProgressCount = tasks.filter(t => t.status === 'in-progress').length;
@@ -880,10 +1073,56 @@ const TasksTab = ({ tasks, loading, onRefresh, onCreateTask, onUpdateTask, onDel
         </div>
       </div>
 
+      {/* Filter and Sort Controls */}
+      <div className="row g-4 mb-4">
+        <div className="col-12">
+          <div className="panel">
+            <div className="panel__body">
+              <div className="d-flex align-items-center gap-3 flex-wrap">
+                <div className="d-flex align-items-center gap-2">
+                  <Icon name="funnel" size={14} />
+                  <strong>Filter:</strong>
+                  <div className="btn-group btn-group-sm">
+                    <button className={`btn ${taskFilter === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setTaskFilter('all')}>
+                      All
+                    </button>
+                    <button className={`btn ${taskFilter === 'not-started' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setTaskFilter('not-started')}>
+                      To Do
+                    </button>
+                    <button className={`btn ${taskFilter === 'in-progress' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setTaskFilter('in-progress')}>
+                      In Progress
+                    </button>
+                    <button className={`btn ${taskFilter === 'done' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setTaskFilter('done')}>
+                      Done
+                    </button>
+                  </div>
+                </div>
+                <div className="d-flex align-items-center gap-2 ms-auto">
+                  <Icon name="arrow-down-up" size={14} />
+                  <strong>Sort:</strong>
+                  <select className="form-select form-select-sm" style={{ width: 'auto' }} value={taskSort} onChange={e => setTaskSort(e.target.value)}>
+                    <option value="title">Title</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Kanban Board */}
       <div className="row g-4">
         {columns.map(col => {
-          const colTasks = tasks.filter(t => t.status === col.id);
+          // If filtering, show filtered tasks; otherwise show all tasks sorted
+          const colTasks = taskFilter === 'all' 
+            ? tasks.filter(t => t.status === col.id).sort((a, b) => {
+                if (taskSort === 'title') {
+                  return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+                }
+                return 0;
+              })
+            : filteredAndSortedTasks.filter(t => t.status === col.id);
           const isDragOver = dragOverColumn === col.id;
           return (
             <div key={col.id} className="col-lg-4">
@@ -1851,15 +2090,59 @@ const App = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchInputRef = useRef(null);
   
   const handleSearch = (query) => {
     setSearchQuery(query);
     setShowSearchResults(query && query.trim().length > 0);
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Cmd/Ctrl + K to focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }
+      // Escape to close search results
+      if (e.key === 'Escape' && showSearchResults) {
+        setShowSearchResults(false);
+        setSearchQuery('');
+        if (searchInputRef.current) {
+          searchInputRef.current.blur();
+        }
+      }
+      // Number keys 1-5 to switch tabs
+      if (e.key >= '1' && e.key <= '5' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        const tabs = ['overview', 'inbox', 'tasks', 'calendar', 'focus'];
+        const tabIndex = parseInt(e.key) - 1;
+        if (tabIndex < tabs.length) {
+          setActiveTab(tabs[tabIndex]);
+        }
+      }
+      // ? to show keyboard shortcuts
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        setShowShortcuts(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSearchResults]);
+  
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  
+  const handleCreateTaskQuick = () => {
+    setActiveTab('tasks');
+    // The task creation modal will be handled by TasksTab
+  };
+
   return (
     <div className="app-shell">
-      <Header user={CONFIG.user} onSearch={handleSearch} />
+      <Header user={CONFIG.user} onSearch={handleSearch} searchInputRef={searchInputRef} />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} counts={counts} />
       {showSearchResults && (
         <SearchResults
@@ -1873,6 +2156,8 @@ const App = () => {
           onNavigate={setActiveTab}
         />
       )}
+      <KeyboardShortcuts show={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <QuickActions onNavigate={setActiveTab} onCreateTask={handleCreateTaskQuick} />
       <main className="app-main">
         {activeTab === 'overview' && (
           <OverviewTab
