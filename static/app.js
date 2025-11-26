@@ -34,10 +34,183 @@ const Icon = ({ name, size = 20, className = '' }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Search Results Component
+// ─────────────────────────────────────────────────────────────────────────────
+const SearchResults = ({ query, emails, tasks, onClose, onNavigate }) => {
+  if (!query || query.trim().length === 0) return null;
+  
+  const searchTerm = query.toLowerCase().trim();
+  
+  // Filter emails
+  const filteredEmails = emails.filter(email => {
+    const subject = (email.subject || '').toLowerCase();
+    const sender = (email.sender || '').toLowerCase();
+    const snippet = (email.snippet || '').toLowerCase();
+    return subject.includes(searchTerm) || sender.includes(searchTerm) || snippet.includes(searchTerm);
+  });
+  
+  // Filter tasks
+  const filteredTasks = tasks.filter(task => {
+    const title = (task.title || '').toLowerCase();
+    const description = (task.description || '').toLowerCase();
+    return title.includes(searchTerm) || description.includes(searchTerm);
+  });
+  
+  const totalResults = filteredEmails.length + filteredTasks.length;
+  
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  const getInitials = (sender) => {
+    const name = sender?.split('<')[0]?.trim() || 'U';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+  
+  const getAvatarColor = (text) => {
+    const colors = ['blue', 'purple', 'teal', 'orange'];
+    const hash = (text || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  };
+  
+  return (
+    <div className="search-overlay" onClick={onClose}>
+      <div className="search-results" onClick={e => e.stopPropagation()}>
+        <div className="search-results__header">
+          <h3 className="search-results__title">
+            <Icon name="search" size={18} className="me-2" />
+            Search Results
+          </h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>
+            <Icon name="x-lg" size={16} />
+          </button>
+        </div>
+        <div className="search-results__query">
+          <span className="text-muted">Searching for:</span> <strong>"{query}"</strong>
+          <span className="badge bg-primary ms-2">{totalResults} results</span>
+        </div>
+        <div className="search-results__body">
+          {totalResults === 0 ? (
+            <div className="empty-state empty-state--compact">
+              <Icon name="search" size={48} />
+              <h4>No results found</h4>
+              <p>Try a different search term</p>
+            </div>
+          ) : (
+            <>
+              {filteredEmails.length > 0 && (
+                <div className="search-results__section">
+                  <div className="search-results__section-header">
+                    <Icon name="envelope-fill" size={16} className="me-2" />
+                    <strong>Emails ({filteredEmails.length})</strong>
+                    <button className="btn btn-link btn-sm ms-auto" onClick={() => { onNavigate('inbox'); onClose(); }}>
+                      View all <Icon name="arrow-right" size={12} className="ms-1" />
+                    </button>
+                  </div>
+                  <div className="search-results__list">
+                    {filteredEmails.slice(0, 5).map(email => (
+                      <div 
+                        key={email.id} 
+                        className="search-result-item"
+                        onClick={() => { onNavigate('inbox'); onClose(); }}
+                      >
+                        <div className={`search-result-item__avatar search-result-item__avatar--${getAvatarColor(email.sender)}`}>
+                          {getInitials(email.sender)}
+                        </div>
+                        <div className="search-result-item__content">
+                          <div className="search-result-item__header">
+                            <span className="search-result-item__title">{email.subject || '(No subject)'}</span>
+                            <span className="search-result-item__date">{formatDate(email.date)}</span>
+                          </div>
+                          <div className="search-result-item__meta">{email.sender?.split('<')[0]?.trim() || 'Unknown'}</div>
+                          <div className="search-result-item__snippet">{email.snippet}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredEmails.length > 5 && (
+                      <div className="search-results__more">
+                        +{filteredEmails.length - 5} more emails
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {filteredTasks.length > 0 && (
+                <div className="search-results__section">
+                  <div className="search-results__section-header">
+                    <Icon name="check2-square" size={16} className="me-2" />
+                    <strong>Tasks ({filteredTasks.length})</strong>
+                    <button className="btn btn-link btn-sm ms-auto" onClick={() => { onNavigate('tasks'); onClose(); }}>
+                      View all <Icon name="arrow-right" size={12} className="ms-1" />
+                    </button>
+                  </div>
+                  <div className="search-results__list">
+                    {filteredTasks.slice(0, 5).map(task => (
+                      <div 
+                        key={task.id} 
+                        className="search-result-item"
+                        onClick={() => { onNavigate('tasks'); onClose(); }}
+                      >
+                        <div className={`search-result-item__icon search-result-item__icon--${task.status === 'done' ? 'teal' : task.status === 'in-progress' ? 'blue' : 'purple'}`}>
+                          <Icon 
+                            name={task.status === 'done' ? 'check-circle-fill' : task.status === 'in-progress' ? 'play-circle-fill' : 'circle'} 
+                            size={16} 
+                          />
+                        </div>
+                        <div className="search-result-item__content">
+                          <div className="search-result-item__header">
+                            <span className="search-result-item__title">{task.title}</span>
+                            <span className={`badge bg-${task.status === 'done' ? 'success' : task.status === 'in-progress' ? 'primary' : 'secondary'}`}>
+                              {task.status === 'done' ? 'Done' : task.status === 'in-progress' ? 'In Progress' : 'To Do'}
+                            </span>
+                          </div>
+                          {task.description && (
+                            <div className="search-result-item__snippet">{task.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {filteredTasks.length > 5 && (
+                      <div className="search-results__more">
+                        +{filteredTasks.length - 5} more tasks
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Header Component
 // ─────────────────────────────────────────────────────────────────────────────
-const Header = ({ user }) => {
+const Header = ({ user, onSearch }) => {
   const initials = user.givenName ? user.givenName[0].toUpperCase() : user.email[0]?.toUpperCase() || '?';
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    if (onSearch) {
+      onSearch(query);
+    }
+  };
   
   return (
     <header className="app-header">
@@ -45,6 +218,16 @@ const Header = ({ user }) => {
         <div className="d-flex align-items-center justify-content-between py-3">
           <div className="d-flex align-items-center gap-3">
             <h1 className="brand-logo mb-0">Eduverse</h1>
+            <div className="header-search">
+              <Icon name="search" size={16} className="header-search__icon" />
+              <input
+                type="text"
+                className="header-search__input"
+                placeholder="Search emails, tasks, events..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+              />
+            </div>
           </div>
           <div className="d-flex align-items-center gap-3">
             <span className="user-email d-none d-md-inline">{user.email}</span>
@@ -1156,18 +1339,92 @@ const CalendarTab = ({ events, loading, onRefresh }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
   const [mode, setMode] = useState('focus'); // 'focus' or 'break'
-  const [focusMins, setFocusMins] = useState(25);
-  const [breakMins, setBreakMins] = useState(5);
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [totalTimeMins, setTotalTimeMins] = useState(60); // Total time in minutes
   const [isRunning, setIsRunning] = useState(false);
   const [sessions, setSessions] = useState([]); // Track completed sessions
-
-  const totalTime = mode === 'focus' ? focusMins * 60 : breakMins * 60;
-  const progress = ((totalTime - timeLeft) / totalTime) * 100;
+  const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
+  
+  // Auto-calculate 70% focus / 30% break split
+  const focusMins = Math.round(totalTimeMins * 0.7);
+  const breakMins = Math.round(totalTimeMins * 0.3);
+  
+  // Create session schedule: alternating small intervals (e.g., 2 min focus, 1 min break)
+  // Maintains 70/30 ratio throughout the total time
+  const sessionSchedule = useMemo(() => {
+    const schedule = [];
+    let remainingFocus = focusMins;
+    let remainingBreak = breakMins;
+    
+    // Use 2 min focus / 1 min break intervals
+    // This gives us a 2:1 ratio which is close to 70:30 (actually 66.7:33.3)
+    // We'll adjust the last intervals to get closer to exact 70:30
+    const focusInterval = 2; // 2 minutes focus per interval
+    const breakInterval = 1; // 1 minute break per interval
+    
+    // Calculate how many full cycles we can fit
+    const cycleTime = focusInterval + breakInterval; // 3 minutes per cycle
+    const maxCycles = Math.ceil(totalTimeMins / cycleTime);
+    
+    // Add alternating intervals until we run out of time
+    let totalScheduled = 0;
+    for (let i = 0; i < maxCycles && totalScheduled < totalTimeMins; i++) {
+      // Add focus interval if we have remaining focus time
+      if (remainingFocus > 0 && totalScheduled < totalTimeMins) {
+        const focusToAdd = Math.min(focusInterval, remainingFocus, totalTimeMins - totalScheduled);
+        if (focusToAdd > 0) {
+          schedule.push({ type: 'focus', duration: focusToAdd });
+          remainingFocus -= focusToAdd;
+          totalScheduled += focusToAdd;
+        }
+      }
+      
+      // Add break interval if we have remaining break time
+      if (remainingBreak > 0 && totalScheduled < totalTimeMins) {
+        const breakToAdd = Math.min(breakInterval, remainingBreak, totalTimeMins - totalScheduled);
+        if (breakToAdd > 0) {
+          schedule.push({ type: 'break', duration: breakToAdd });
+          remainingBreak -= breakToAdd;
+          totalScheduled += breakToAdd;
+        }
+      }
+    }
+    
+    // Add any remaining time to maintain exact 70/30 ratio
+    if (remainingFocus > 0 && totalScheduled < totalTimeMins) {
+      const remaining = Math.min(remainingFocus, totalTimeMins - totalScheduled);
+      if (remaining > 0) {
+        schedule.push({ type: 'focus', duration: remaining });
+      }
+    }
+    if (remainingBreak > 0 && totalScheduled < totalTimeMins) {
+      const remaining = Math.min(remainingBreak, totalTimeMins - totalScheduled);
+      if (remaining > 0) {
+        schedule.push({ type: 'break', duration: remaining });
+      }
+    }
+    
+    return schedule;
+  }, [focusMins, breakMins, totalTimeMins]);
+  
+  // Initialize timeLeft based on current session (start with focus session)
+  const [timeLeft, setTimeLeft] = useState(focusMins * 60);
+  
+  // Update timeLeft and mode when session schedule or index changes
+  useEffect(() => {
+    if (sessionSchedule.length > 0 && currentSessionIndex < sessionSchedule.length) {
+      const session = sessionSchedule[currentSessionIndex];
+      setTimeLeft(session.duration * 60);
+      setMode(session.type);
+    }
+  }, [sessionSchedule, currentSessionIndex, focusMins]);
+  
+  const currentSession = sessionSchedule[currentSessionIndex] || { duration: 0, type: 'focus' };
+  const totalTime = currentSession.duration * 60;
+  const progress = totalTime > 0 ? ((totalTime - timeLeft) / totalTime) * 100 : 0;
   const focusTimeHours = Math.round(pomodoroCount * focusMins / 60 * 10) / 10;
 
   // Calculate total cycle time and segments for timeline
-  const totalCycleTime = focusMins + breakMins;
+  const totalCycleTime = totalTimeMins;
   const focusPercent = (focusMins / totalCycleTime) * 100;
   const breakPercent = (breakMins / totalCycleTime) * 100;
 
@@ -1177,26 +1434,45 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
       interval = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && sessionSchedule.length > 0) {
       setIsRunning(false);
       
       // Record completed session
-      setSessions(prev => [...prev, { type: mode, duration: mode === 'focus' ? focusMins : breakMins, completedAt: new Date() }]);
+      const completedSession = sessionSchedule[currentSessionIndex];
+      setSessions(prev => [...prev, { 
+        type: completedSession.type, 
+        duration: completedSession.duration, 
+        completedAt: new Date() 
+      }]);
       
-      if (mode === 'focus') {
+      // Count focus sessions
+      if (completedSession.type === 'focus') {
         onPomodoroComplete();
-        setMode('break');
-        setTimeLeft(breakMins * 60);
-      } else {
-        setMode('focus');
-        setTimeLeft(focusMins * 60);
       }
-      if (Notification.permission === 'granted') {
-        new Notification(mode === 'focus' ? 'Focus session complete! Time for a break.' : 'Break is over! Ready to focus?');
+      
+      // Move to next session
+      if (currentSessionIndex < sessionSchedule.length - 1) {
+        setCurrentSessionIndex(prev => prev + 1);
+        const nextSession = sessionSchedule[currentSessionIndex + 1];
+        setTimeLeft(nextSession.duration * 60);
+        setMode(nextSession.type);
+        
+        if (Notification.permission === 'granted') {
+          new Notification(
+            nextSession.type === 'focus' 
+              ? 'Focus session starting! Time to work.' 
+              : 'Break time! Time to rest.'
+          );
+        }
+      } else {
+        // All sessions completed
+        if (Notification.permission === 'granted') {
+          new Notification('All sessions complete! Great work!');
+        }
       }
     }
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, mode, focusMins, breakMins, onPomodoroComplete]);
+  }, [isRunning, timeLeft, sessionSchedule, currentSessionIndex, onPomodoroComplete]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -1215,27 +1491,19 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
 
   const handleReset = () => {
     setIsRunning(false);
-    setTimeLeft(mode === 'focus' ? focusMins * 60 : breakMins * 60);
+    setCurrentSessionIndex(0);
+    if (sessionSchedule.length > 0) {
+      const firstSession = sessionSchedule[0];
+      setTimeLeft(firstSession.duration * 60);
+      setMode(firstSession.type);
+    }
   };
 
-  const handleModeSwitch = (newMode) => {
+  const handleTotalTimeChange = (val) => {
+    setTotalTimeMins(val);
     setIsRunning(false);
-    setMode(newMode);
-    setTimeLeft(newMode === 'focus' ? focusMins * 60 : breakMins * 60);
+    setCurrentSessionIndex(0);
   };
-
-  const handleFocusChange = (val) => {
-    setFocusMins(val);
-    if (mode === 'focus' && !isRunning) setTimeLeft(val * 60);
-  };
-
-  const handleBreakChange = (val) => {
-    setBreakMins(val);
-    if (mode === 'break' && !isRunning) setTimeLeft(val * 60);
-  };
-
-  // Generate planned sessions for the day (e.g., 8 cycles)
-  const plannedCycles = 8;
 
   return (
     <div className="container-fluid px-4 py-4">
@@ -1269,10 +1537,10 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
           <StatCard icon="clock-history" label="Focus time" value={`${focusTimeHours}h`} accent="blue" />
         </div>
         <div className="col-6 col-md-3">
-          <StatCard icon="lightning-charge-fill" label="Focus duration" value={`${focusMins}m`} accent="purple" />
+          <StatCard icon="hourglass-split" label="Total time" value={`${totalTimeMins}m`} accent="purple" />
         </div>
         <div className="col-6 col-md-3">
-          <StatCard icon="cup-hot-fill" label="Break duration" value={`${breakMins}m`} accent="teal" />
+          <StatCard icon="pie-chart-fill" label="Split" value="70/30" accent="teal" subtitle={`${focusMins}m focus / ${breakMins}m break`} />
         </div>
       </div>
 
@@ -1282,40 +1550,42 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
           <div className="panel">
             <div className="panel__header">
               <h3 className="panel__title"><Icon name="clock-history" size={18} className="me-2" />Session Timeline</h3>
-              <span className="text-muted">{focusMins}m focus + {breakMins}m break = {totalCycleTime}m cycle</span>
+              <span className="text-muted">{totalTimeMins}m total ({focusMins}m focus / {breakMins}m break)</span>
             </div>
             <div className="panel__body">
               <div className="session-timeline">
                 <div className="session-timeline__legend">
                   <span className="session-timeline__legend-item">
                     <span className="session-timeline__legend-dot session-timeline__legend-dot--focus"></span>
-                    Focus ({focusMins}m)
+                    Focus ({focusMins}m - 70%)
                   </span>
                   <span className="session-timeline__legend-item">
                     <span className="session-timeline__legend-dot session-timeline__legend-dot--break"></span>
-                    Break ({breakMins}m)
+                    Break ({breakMins}m - 30%)
                   </span>
                 </div>
                 <div className="session-timeline__bar">
-                  {Array.from({ length: plannedCycles }).map((_, i) => (
-                    <div key={i} className="session-timeline__cycle" style={{ flex: 1 }}>
+                  {sessionSchedule.map((session, idx) => {
+                    const sessionPercent = (session.duration / totalTimeMins) * 100;
+                    const isCompleted = idx < currentSessionIndex;
+                    const isActive = idx === currentSessionIndex && isRunning;
+                    return (
                       <div 
-                        className={`session-timeline__segment session-timeline__segment--focus ${i < pomodoroCount ? 'session-timeline__segment--completed' : ''} ${i === pomodoroCount && mode === 'focus' && isRunning ? 'session-timeline__segment--active' : ''}`}
-                        style={{ width: `${focusPercent}%` }}
+                        key={idx}
+                        className={`session-timeline__segment session-timeline__segment--${session.type} ${isCompleted ? 'session-timeline__segment--completed' : ''} ${isActive ? 'session-timeline__segment--active' : ''}`}
+                        style={{ width: `${sessionPercent}%` }}
+                        title={`${session.type === 'focus' ? 'Focus' : 'Break'}: ${session.duration} min`}
                       >
-                        {i < pomodoroCount && <Icon name="check" size={10} />}
+                        {isCompleted && <Icon name="check" size={10} />}
+                        {isActive && <Icon name="play-fill" size={10} />}
                       </div>
-                      <div 
-                        className={`session-timeline__segment session-timeline__segment--break ${i < pomodoroCount ? 'session-timeline__segment--completed' : ''} ${i === pomodoroCount && mode === 'break' && isRunning ? 'session-timeline__segment--active' : ''}`}
-                        style={{ width: `${breakPercent}%` }}
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="session-timeline__labels">
-                  {Array.from({ length: plannedCycles }).map((_, i) => (
-                    <span key={i} className="session-timeline__label">{i + 1}</span>
-                  ))}
+                  <span className="session-timeline__label">
+                    Session {currentSessionIndex + 1} of {sessionSchedule.length} • {currentSession.type === 'focus' ? 'Focus' : 'Break'} ({currentSession.duration} min)
+                  </span>
                 </div>
               </div>
             </div>
@@ -1393,25 +1663,25 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
               <div className="focus-settings-panel">
                 <div className="focus-setting-row">
                   <div className="focus-setting-info">
-                    <Icon name="lightning-charge-fill" size={20} className="text-primary me-3" />
+                    <Icon name="hourglass-split" size={20} className="text-primary me-3" />
                     <div>
-                      <strong>Focus Duration</strong>
-                      <p className="text-muted mb-0">Time for deep work</p>
+                      <strong>Total Time</strong>
+                      <p className="text-muted mb-0">Total session duration</p>
                     </div>
                   </div>
                   <div className="focus-setting-input">
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleFocusChange(Math.max(5, focusMins - 5))} disabled={isRunning}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleTotalTimeChange(Math.max(10, totalTimeMins - 10))} disabled={isRunning}>
                       <Icon name="dash" size={14} />
                     </button>
                     <input
                       type="number"
-                      value={focusMins}
-                      onChange={e => handleFocusChange(parseInt(e.target.value) || 1)}
-                      min="5"
-                      max="60"
+                      value={totalTimeMins}
+                      onChange={e => handleTotalTimeChange(parseInt(e.target.value) || 10)}
+                      min="10"
+                      max="180"
                       disabled={isRunning}
                     />
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleFocusChange(Math.min(60, focusMins + 5))} disabled={isRunning}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleTotalTimeChange(Math.min(180, totalTimeMins + 10))} disabled={isRunning}>
                       <Icon name="plus" size={14} />
                     </button>
                     <span>min</span>
@@ -1420,40 +1690,39 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
 
                 <div className="focus-setting-row">
                   <div className="focus-setting-info">
-                    <Icon name="cup-hot-fill" size={20} className="text-success me-3" />
+                    <Icon name="lightning-charge-fill" size={20} className="text-primary me-3" />
                     <div>
-                      <strong>Break Duration</strong>
-                      <p className="text-muted mb-0">Time to rest and recharge</p>
+                      <strong>Focus Time</strong>
+                      <p className="text-muted mb-0">Auto-calculated: 70% of total</p>
                     </div>
                   </div>
                   <div className="focus-setting-input">
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleBreakChange(Math.max(1, breakMins - 1))} disabled={isRunning}>
-                      <Icon name="dash" size={14} />
-                    </button>
-                    <input
-                      type="number"
-                      value={breakMins}
-                      onChange={e => handleBreakChange(parseInt(e.target.value) || 1)}
-                      min="1"
-                      max="30"
-                      disabled={isRunning}
-                    />
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleBreakChange(Math.min(30, breakMins + 1))} disabled={isRunning}>
-                      <Icon name="plus" size={14} />
-                    </button>
-                    <span>min</span>
+                    <span className="text-muted">{focusMins} min</span>
+                  </div>
+                </div>
+
+                <div className="focus-setting-row">
+                  <div className="focus-setting-info">
+                    <Icon name="cup-hot-fill" size={20} className="text-success me-3" />
+                    <div>
+                      <strong>Break Time</strong>
+                      <p className="text-muted mb-0">Auto-calculated: 30% of total</p>
+                    </div>
+                  </div>
+                  <div className="focus-setting-input">
+                    <span className="text-muted">{breakMins} min</span>
                   </div>
                 </div>
 
                 {/* Visual ratio indicator */}
                 <div className="focus-ratio">
-                  <span className="focus-ratio__label">Session ratio</span>
+                  <span className="focus-ratio__label">Auto Split: 70% Focus / 30% Break</span>
                   <div className="focus-ratio__bar">
                     <div className="focus-ratio__focus" style={{ width: `${focusPercent}%` }}>
-                      {focusMins}m
+                      {focusMins}m (70%)
                     </div>
                     <div className="focus-ratio__break" style={{ width: `${breakPercent}%` }}>
-                      {breakMins}m
+                      {breakMins}m (30%)
                     </div>
                   </div>
                 </div>
@@ -1580,10 +1849,30 @@ const App = () => {
     events: events.length
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    setShowSearchResults(query && query.trim().length > 0);
+  };
+
   return (
     <div className="app-shell">
-      <Header user={CONFIG.user} />
+      <Header user={CONFIG.user} onSearch={handleSearch} />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} counts={counts} />
+      {showSearchResults && (
+        <SearchResults
+          query={searchQuery}
+          emails={emails}
+          tasks={tasks}
+          onClose={() => {
+            setShowSearchResults(false);
+            setSearchQuery('');
+          }}
+          onNavigate={setActiveTab}
+        />
+      )}
       <main className="app-main">
         {activeTab === 'overview' && (
           <OverviewTab

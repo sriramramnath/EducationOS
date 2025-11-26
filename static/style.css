@@ -135,6 +135,273 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   Header Search
+   ───────────────────────────────────────────────────────────────────────────── */
+.header-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.header-search__icon {
+  position: absolute;
+  left: 0.875rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.header-search__input {
+  width: 100%;
+  padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+}
+
+.header-search__input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.header-search__input::placeholder {
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .header-search {
+    min-width: 200px;
+    max-width: 250px;
+  }
+  
+  .header-search__input {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.75rem 0.5rem 2rem;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Search Results Overlay
+   ───────────────────────────────────────────────────────────────────────────── */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 2000;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+}
+
+.search-results {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-results__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.search-results__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.search-results__query {
+  padding: 1rem 1.5rem;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 0.875rem;
+}
+
+.search-results__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.search-results__section {
+  margin-bottom: 2rem;
+}
+
+.search-results__section:last-child {
+  margin-bottom: 0;
+}
+
+.search-results__section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.search-results__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.search-result-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.search-result-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-result-item__avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+}
+
+.search-result-item__avatar--blue { background: var(--accent-blue); }
+.search-result-item__avatar--purple { background: var(--accent-purple); }
+.search-result-item__avatar--teal { background: var(--accent-teal); }
+.search-result-item__avatar--orange { background: var(--accent-orange); }
+
+.search-result-item__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-result-item__icon--blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-blue);
+}
+
+.search-result-item__icon--purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-purple);
+}
+
+.search-result-item__icon--teal {
+  background: rgba(20, 184, 166, 0.15);
+  color: var(--accent-teal);
+}
+
+.search-result-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.search-result-item__title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-item__date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.search-result-item__meta {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.search-result-item__snippet {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.search-results__more {
+  text-align: center;
+  padding: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .search-overlay {
+    padding: 1rem 0.5rem;
+  }
+  
+  .search-results {
+    max-height: 90vh;
+  }
+  
+  .search-results__header {
+    padding: 1rem;
+  }
+  
+  .search-results__body {
+    padding: 1rem;
+  }
+  
+  .search-result-item {
+    padding: 0.75rem;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    Tab Navigation
    ───────────────────────────────────────────────────────────────────────────── */
 .tab-nav {
@@ -1591,8 +1858,10 @@ body {
 
 .session-timeline__bar {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   height: 32px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .session-timeline__cycle {
@@ -1607,6 +1876,9 @@ body {
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
+  min-width: 4px;
+  font-size: 0.625rem;
+  position: relative;
 }
 
 .session-timeline__segment--focus {
