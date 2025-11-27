@@ -356,6 +356,9 @@ const TabNav = ({ activeTab, onTabChange, counts }) => {
     { id: 'inbox', icon: 'envelope-fill', label: 'Inbox', count: counts.emails },
     { id: 'tasks', icon: 'check2-square', label: 'Tasks', count: counts.tasks },
     { id: 'calendar', icon: 'calendar3', label: 'Calendar', count: counts.events },
+    { id: 'goals', icon: 'target', label: 'Goals', count: counts.goals },
+    { id: 'analytics', icon: 'graph-up-arrow', label: 'Analytics' },
+    { id: 'habits', icon: 'fire', label: 'Habits', count: counts.habits },
     { id: 'focus', icon: 'bullseye', label: 'Focus' }
   ];
 
@@ -1838,20 +1841,9 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
           <div className="panel">
             <div className="panel__header">
               <h3 className="panel__title">Timer</h3>
-              <div className="focus-mode-toggle-sm">
-                <button
-                  className={`focus-mode-btn-sm ${mode === 'focus' ? 'focus-mode-btn-sm--active' : ''}`}
-                  onClick={() => handleModeSwitch('focus')}
-                >
-                  Focus
-                </button>
-                <button
-                  className={`focus-mode-btn-sm ${mode === 'break' ? 'focus-mode-btn-sm--active focus-mode-btn-sm--break' : ''}`}
-                  onClick={() => handleModeSwitch('break')}
-                >
-                  Break
-                </button>
-              </div>
+              <span className={`badge bg-${mode === 'focus' ? 'primary' : 'success'}`}>
+                {mode === 'focus' ? 'Focus' : 'Break'} Mode
+              </span>
             </div>
             <div className="panel__body">
               <div className="focus-container">
@@ -1985,6 +1977,841 @@ const FocusTab = ({ pomodoroCount, onPomodoroComplete }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Goals Tab - Goal Tracking & Progress Dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+const GoalsTab = ({ goals, achievements, loading, onRefresh, onCreateGoal, onUpdateGoal, onDeleteGoal }) => {
+  const [showModal, setShowModal] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState(null);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalDesc, setNewGoalDesc] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState(100);
+  const [newGoalUnit, setNewGoalUnit] = useState('points');
+  const [newGoalCategory, setNewGoalCategory] = useState('');
+  const [newGoalDeadline, setNewGoalDeadline] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  const activeGoals = goals.filter(g => g.status === 'active');
+  const completedGoals = goals.filter(g => g.status === 'completed');
+  const filteredGoals = filterStatus === 'all' ? goals : goals.filter(g => g.status === filterStatus);
+
+  const handleCreate = async () => {
+    if (!newGoalTitle.trim()) return;
+    setCreating(true);
+    try {
+      await onCreateGoal({
+        title: newGoalTitle,
+        description: newGoalDesc,
+        target_value: newGoalTarget,
+        unit: newGoalUnit,
+        category: newGoalCategory,
+        deadline: newGoalDeadline || null,
+      });
+      setNewGoalTitle('');
+      setNewGoalDesc('');
+      setNewGoalTarget(100);
+      setNewGoalUnit('points');
+      setNewGoalCategory('');
+      setNewGoalDeadline('');
+      setShowModal(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleUpdateProgress = async (goal, newValue) => {
+    await onUpdateGoal(goal.id, { current_value: newValue });
+  };
+
+  return (
+    <div className="container-fluid px-4 py-4">
+      <div className="row g-4 mb-4">
+        <div className="col-12">
+          <div className="section-banner section-banner--purple">
+            <div className="section-banner__content">
+              <h2 className="section-banner__title">
+                <Icon name="target" size={28} className="me-3" />
+                Goals & Progress
+              </h2>
+              <p className="section-banner__subtitle">Track your progress and achieve your objectives</p>
+            </div>
+            <div className="section-banner__actions">
+              <button className="btn btn-light btn-sm" onClick={onRefresh} disabled={loading}>
+                <Icon name={loading ? 'arrow-repeat' : 'arrow-clockwise'} size={14} className={loading ? 'spin' : ''} />
+                <span className="ms-2">Refresh</span>
+              </button>
+              <button className="btn btn-light btn-sm ms-2" onClick={() => setShowModal(true)}>
+                <Icon name="plus-lg" size={14} />
+                <span className="ms-2">New Goal</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div className="row g-4 mb-4">
+        <div className="col-6 col-md-3">
+          <StatCard icon="target" label="Total Goals" value={goals.length} accent="purple" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="play-circle" label="Active" value={activeGoals.length} accent="blue" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="check-circle-fill" label="Completed" value={completedGoals.length} accent="teal" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="trophy-fill" label="Achievements" value={achievements.length} accent="orange" />
+        </div>
+      </div>
+
+      {/* Achievements Section */}
+      {achievements.length > 0 && (
+        <div className="row g-4 mb-4">
+          <div className="col-12">
+            <div className="panel">
+              <div className="panel__header">
+                <h3 className="panel__title"><Icon name="trophy-fill" size={18} className="me-2" />Recent Achievements</h3>
+              </div>
+              <div className="panel__body">
+                <div className="achievements-grid">
+                  {achievements.slice(0, 6).map(achievement => (
+                    <div key={achievement.id} className="achievement-card">
+                      <div className={`achievement-card__icon achievement-card__icon--${achievement.icon || 'trophy'}`}>
+                        <Icon name={achievement.icon || 'trophy-fill'} size={24} />
+                      </div>
+                      <div className="achievement-card__content">
+                        <h5 className="achievement-card__title">{achievement.title}</h5>
+                        <p className="achievement-card__desc">{achievement.description}</p>
+                        <span className="achievement-card__date">
+                          {new Date(achievement.unlocked_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter */}
+      <div className="row g-4 mb-4">
+        <div className="col-12">
+          <div className="btn-group">
+            <button className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setFilterStatus('all')}>
+              All
+            </button>
+            <button className={`btn ${filterStatus === 'active' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setFilterStatus('active')}>
+              Active
+            </button>
+            <button className={`btn ${filterStatus === 'completed' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setFilterStatus('completed')}>
+              Completed
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Goals List */}
+      <div className="row g-4">
+        {filteredGoals.length === 0 ? (
+          <div className="col-12">
+            <div className="empty-state">
+              <Icon name="target" size={48} />
+              <h4>No goals found</h4>
+              <p>Create your first goal to start tracking progress</p>
+              <button className="btn btn-primary mt-3" onClick={() => setShowModal(true)}>
+                Create Goal
+              </button>
+            </div>
+          </div>
+        ) : (
+          filteredGoals.map(goal => (
+            <div key={goal.id} className="col-lg-6">
+              <div className={`panel goal-card ${goal.is_overdue ? 'goal-card--overdue' : ''}`}>
+                <div className="panel__header">
+                  <h3 className="panel__title">{goal.title}</h3>
+                  <span className={`badge bg-${goal.status === 'completed' ? 'success' : goal.status === 'active' ? 'primary' : 'secondary'}`}>
+                    {goal.status}
+                  </span>
+                </div>
+                <div className="panel__body">
+                  {goal.description && <p className="text-muted mb-3">{goal.description}</p>}
+                  
+                  <div className="goal-progress mb-3">
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted">Progress</span>
+                      <span className="fw-bold">{goal.progress_percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="progress" style={{ height: '12px' }}>
+                      <div 
+                        className={`progress-bar bg-${goal.status === 'completed' ? 'success' : 'primary'}`}
+                        style={{ width: `${Math.min(100, goal.progress_percentage)}%` }}
+                      />
+                    </div>
+                    <div className="d-flex justify-content-between mt-2 text-sm text-muted">
+                      <span>{goal.current_value} {goal.unit}</span>
+                      <span>{goal.target_value} {goal.unit}</span>
+                    </div>
+                  </div>
+
+                  {goal.category && (
+                    <div className="mb-2">
+                      <span className="badge bg-secondary">{goal.category}</span>
+                    </div>
+                  )}
+
+                  {goal.deadline && (
+                    <div className="mb-3">
+                      <Icon name="calendar" size={14} className="me-1" />
+                      <span className="text-muted">
+                        Deadline: {new Date(goal.deadline).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {goal.status === 'active' && (
+                    <div className="d-flex gap-2">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm"
+                        placeholder="Update progress"
+                        min="0"
+                        max={goal.target_value}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleUpdateProgress(goal, parseFloat(e.target.value));
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                      <button 
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const newValue = Math.min(goal.target_value, goal.current_value + (goal.target_value * 0.1));
+                          handleUpdateProgress(goal, newValue);
+                        }}
+                      >
+                        +10%
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="d-flex gap-2 mt-3">
+                    {goal.status === 'active' && (
+                      <button 
+                        className="btn btn-success btn-sm"
+                        onClick={() => onUpdateGoal(goal.id, { status: 'completed', current_value: goal.target_value })}
+                      >
+                        Complete
+                      </button>
+                    )}
+                    <button 
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => onDeleteGoal(goal.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Create Goal Modal */}
+      {showModal && (
+        <div className="modal-backdrop show" onClick={() => setShowModal(false)}>
+          <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Create New Goal</h5>
+                <button className="btn-close" onClick={() => setShowModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Title *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={newGoalTitle}
+                    onChange={e => setNewGoalTitle(e.target.value)}
+                    placeholder="What do you want to achieve?"
+                    autoFocus
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Description</label>
+                  <textarea
+                    className="form-control"
+                    value={newGoalDesc}
+                    onChange={e => setNewGoalDesc(e.target.value)}
+                    placeholder="Add more details..."
+                    rows={3}
+                  />
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Target Value</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={newGoalTarget}
+                      onChange={e => setNewGoalTarget(parseFloat(e.target.value) || 0)}
+                      min="1"
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Unit</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={newGoalUnit}
+                      onChange={e => setNewGoalUnit(e.target.value)}
+                      placeholder="e.g., hours, pages, tasks"
+                    />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Category</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={newGoalCategory}
+                    onChange={e => setNewGoalCategory(e.target.value)}
+                    placeholder="e.g., Study, Fitness, Career"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Deadline (optional)</label>
+                  <input
+                    type="datetime-local"
+                    className="form-control"
+                    value={newGoalDeadline}
+                    onChange={e => setNewGoalDeadline(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleCreate} disabled={creating || !newGoalTitle.trim()}>
+                  {creating ? 'Creating...' : 'Create Goal'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Analytics Tab - Time Analytics & Productivity Insights
+// ─────────────────────────────────────────────────────────────────────────────
+const AnalyticsTab = ({ timeData, loading, onRefresh }) => {
+  const [selectedDays, setSelectedDays] = useState(30);
+  const [selectedActivity, setSelectedActivity] = useState('all');
+
+  const analytics = timeData?.analytics || {};
+  const entries = timeData?.entries || [];
+  const dailyBreakdown = analytics.daily_breakdown || [];
+  const activityBreakdown = analytics.activity_breakdown || {};
+
+  // Prepare chart data
+  const chartData = dailyBreakdown.slice(-14).map(day => ({
+    date: day.date,
+    minutes: day.total_minutes,
+    hours: (day.total_minutes / 60).toFixed(1),
+  }));
+
+  const maxMinutes = Math.max(...chartData.map(d => d.minutes), 1);
+
+  // Activity type colors
+  const activityColors = {
+    study: 'blue',
+    work: 'purple',
+    exercise: 'teal',
+    break: 'orange',
+    other: 'gray',
+  };
+
+  return (
+    <div className="container-fluid px-4 py-4">
+      <div className="row g-4 mb-4">
+        <div className="col-12">
+          <div className="section-banner section-banner--blue">
+            <div className="section-banner__content">
+              <h2 className="section-banner__title">
+                <Icon name="graph-up-arrow" size={28} className="me-3" />
+                Time Analytics
+              </h2>
+              <p className="section-banner__subtitle">Track and analyze your productivity patterns</p>
+            </div>
+            <div className="section-banner__actions">
+              <div className="btn-group me-2">
+                <button 
+                  className={`btn btn-sm ${selectedDays === 7 ? 'btn-light' : 'btn-outline-light'}`}
+                  onClick={() => setSelectedDays(7)}
+                >
+                  7 days
+                </button>
+                <button 
+                  className={`btn btn-sm ${selectedDays === 30 ? 'btn-light' : 'btn-outline-light'}`}
+                  onClick={() => setSelectedDays(30)}
+                >
+                  30 days
+                </button>
+                <button 
+                  className={`btn btn-sm ${selectedDays === 90 ? 'btn-light' : 'btn-outline-light'}`}
+                  onClick={() => setSelectedDays(90)}
+                >
+                  90 days
+                </button>
+              </div>
+              <button className="btn btn-light btn-sm" onClick={onRefresh} disabled={loading}>
+                <Icon name={loading ? 'arrow-repeat' : 'arrow-clockwise'} size={14} className={loading ? 'spin' : ''} />
+                <span className="ms-2">Refresh</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div className="row g-4 mb-4">
+        <div className="col-6 col-md-3">
+          <StatCard icon="clock-history" label="Total Time" value={`${analytics.total_hours || 0}h`} accent="blue" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="calendar-day" label="Avg Daily" value={`${Math.round(analytics.avg_daily_minutes || 0)}m`} accent="purple" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="calendar-week" label="Avg Weekly" value={`${analytics.avg_weekly_hours?.toFixed(1) || 0}h`} accent="teal" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="list-check" label="Total Sessions" value={entries.length} accent="orange" />
+        </div>
+      </div>
+
+      {/* Activity Breakdown */}
+      <div className="row g-4 mb-4">
+        <div className="col-lg-6">
+          <div className="panel">
+            <div className="panel__header">
+              <h3 className="panel__title"><Icon name="pie-chart-fill" size={18} className="me-2" />Activity Breakdown</h3>
+            </div>
+            <div className="panel__body">
+              {Object.keys(activityBreakdown).length === 0 ? (
+                <div className="empty-state empty-state--compact">
+                  <Icon name="bar-chart" size={32} />
+                  <p>No activity data yet</p>
+                </div>
+              ) : (
+                <div className="activity-breakdown">
+                  {Object.entries(activityBreakdown).map(([type, minutes]) => {
+                    const hours = (minutes / 60).toFixed(1);
+                    const percentage = analytics.total_minutes > 0 ? (minutes / analytics.total_minutes * 100).toFixed(1) : 0;
+                    return (
+                      <div key={type} className="activity-item">
+                        <div className="activity-item__header">
+                          <div className="d-flex align-items-center gap-2">
+                            <span className={`badge bg-${activityColors[type] || 'secondary'}`}>
+                              {type.charAt(0).toUpperCase() + type.slice(1)}
+                            </span>
+                            <span className="fw-bold">{hours}h</span>
+                            <span className="text-muted">({percentage}%)</span>
+                          </div>
+                        </div>
+                        <div className="progress" style={{ height: '8px' }}>
+                          <div 
+                            className={`progress-bar bg-${activityColors[type] || 'secondary'}`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-6">
+          <div className="panel">
+            <div className="panel__header">
+              <h3 className="panel__title"><Icon name="graph-up" size={18} className="me-2" />Daily Activity (Last 14 Days)</h3>
+            </div>
+            <div className="panel__body">
+              {chartData.length === 0 ? (
+                <div className="empty-state empty-state--compact">
+                  <Icon name="bar-chart" size={32} />
+                  <p>No data available</p>
+                </div>
+              ) : (
+                <div className="analytics-chart">
+                  <div className="analytics-chart__bars">
+                    {chartData.map((day, i) => {
+                      const date = new Date(day.date);
+                      const dayLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      return (
+                        <div key={i} className="analytics-chart__bar-wrapper">
+                          <div 
+                            className="analytics-chart__bar"
+                            style={{ height: `${(day.minutes / maxMinutes) * 100}%` }}
+                            title={`${day.hours}h on ${dayLabel}`}
+                          />
+                          <span className="analytics-chart__label">{dayLabel}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Entries */}
+      <div className="row g-4">
+        <div className="col-12">
+          <div className="panel">
+            <div className="panel__header">
+              <h3 className="panel__title"><Icon name="clock-history" size={18} className="me-2" />Recent Time Entries</h3>
+            </div>
+            <div className="panel__body">
+              {entries.length === 0 ? (
+                <div className="empty-state empty-state--compact">
+                  <Icon name="clock" size={32} />
+                  <p>No time entries yet. Start tracking your time!</p>
+                </div>
+              ) : (
+                <div className="time-entries-list">
+                  {entries.slice(0, 20).map(entry => {
+                    const start = new Date(entry.start_time);
+                    const end = entry.end_time ? new Date(entry.end_time) : null;
+                    return (
+                      <div key={entry.id} className="time-entry-item">
+                        <div className={`time-entry-item__icon time-entry-item__icon--${activityColors[entry.activity_type] || 'gray'}`}>
+                          <Icon name="circle-fill" size={12} />
+                        </div>
+                        <div className="time-entry-item__content">
+                          <span className="time-entry-item__type">{entry.activity_type}</span>
+                          {entry.description && (
+                            <span className="time-entry-item__desc">{entry.description}</span>
+                          )}
+                          <span className="time-entry-item__time">
+                            {start.toLocaleDateString()} {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            {end && ` - ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
+                          </span>
+                        </div>
+                        <div className="time-entry-item__duration">
+                          {entry.duration_minutes > 0 ? `${entry.duration_minutes}m` : 'Active'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Habits Tab - Habit Tracker & Streak System
+// ─────────────────────────────────────────────────────────────────────────────
+const HabitsTab = ({ habits, loading, onRefresh, onCreateHabit, onUpdateHabit, onDeleteHabit, onToggleCompletion }) => {
+  const [showModal, setShowModal] = useState(false);
+  const [newHabitName, setNewHabitName] = useState('');
+  const [newHabitDesc, setNewHabitDesc] = useState('');
+  const [newHabitColor, setNewHabitColor] = useState('blue');
+  const [newHabitIcon, setNewHabitIcon] = useState('star');
+  const [creating, setCreating] = useState(false);
+  const [selectedHabit, setSelectedHabit] = useState(null);
+  const [completions, setCompletions] = useState({});
+
+  const activeHabits = habits.filter(h => h.is_active);
+  const totalStreak = activeHabits.reduce((sum, h) => sum + h.current_streak, 0);
+
+  useEffect(() => {
+    // Fetch completions for all habits
+    activeHabits.forEach(habit => {
+      if (!completions[habit.id]) {
+        fetchCompletions(habit.id);
+      }
+    });
+  }, [habits]);
+
+  const fetchCompletions = async (habitId) => {
+    try {
+      const data = await apiFetch(`${CONFIG.routes.apiHabits}${habitId}/completions/`);
+      setCompletions(prev => ({ ...prev, [habitId]: data.completions || [] }));
+    } catch (err) {
+      console.error('Failed to fetch completions:', err);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newHabitName.trim()) return;
+    setCreating(true);
+    try {
+      await onCreateHabit({
+        name: newHabitName,
+        description: newHabitDesc,
+        color: newHabitColor,
+        icon: newHabitIcon,
+      });
+      setNewHabitName('');
+      setNewHabitDesc('');
+      setNewHabitColor('blue');
+      setNewHabitIcon('star');
+      setShowModal(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleToggle = async (habitId) => {
+    try {
+      const result = await onToggleCompletion(habitId);
+      if (result) {
+        fetchCompletions(habitId);
+        onRefresh();
+      }
+    } catch (err) {
+      console.error('Failed to toggle completion:', err);
+    }
+  };
+
+  const getStreakCalendar = (habit) => {
+    const days = [];
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const completion = completions[habit.id]?.find(c => c.date === dateStr);
+      days.push({
+        date: dateStr,
+        dateObj: date,
+        completed: completion?.completed || false,
+      });
+    }
+    return days;
+  };
+
+  const colorOptions = ['blue', 'purple', 'teal', 'orange', 'green', 'red'];
+  const iconOptions = ['star', 'heart', 'fire', 'trophy', 'check-circle', 'lightning', 'book', 'dumbbell'];
+
+  return (
+    <div className="container-fluid px-4 py-4">
+      <div className="row g-4 mb-4">
+        <div className="col-12">
+          <div className="section-banner section-banner--orange">
+            <div className="section-banner__content">
+              <h2 className="section-banner__title">
+                <Icon name="fire" size={28} className="me-3" />
+                Habit Tracker
+              </h2>
+              <p className="section-banner__subtitle">Build consistent study habits with visual streaks</p>
+            </div>
+            <div className="section-banner__actions">
+              <button className="btn btn-light btn-sm" onClick={onRefresh} disabled={loading}>
+                <Icon name={loading ? 'arrow-repeat' : 'arrow-clockwise'} size={14} className={loading ? 'spin' : ''} />
+                <span className="ms-2">Refresh</span>
+              </button>
+              <button className="btn btn-light btn-sm ms-2" onClick={() => setShowModal(true)}>
+                <Icon name="plus-lg" size={14} />
+                <span className="ms-2">New Habit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div className="row g-4 mb-4">
+        <div className="col-6 col-md-3">
+          <StatCard icon="fire" label="Active Habits" value={activeHabits.length} accent="orange" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="lightning-charge" label="Total Streak" value={totalStreak} accent="blue" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="trophy" label="Longest Streak" value={Math.max(...activeHabits.map(h => h.longest_streak), 0)} accent="purple" />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard icon="calendar-check" label="Today's Completions" value={activeHabits.filter(h => {
+            const today = new Date().toISOString().split('T')[0];
+            return completions[h.id]?.some(c => c.date === today && c.completed);
+          }).length} accent="teal" />
+        </div>
+      </div>
+
+      {/* Habits Grid */}
+      <div className="row g-4">
+        {activeHabits.length === 0 ? (
+          <div className="col-12">
+            <div className="empty-state">
+              <Icon name="fire" size={48} />
+              <h4>No habits yet</h4>
+              <p>Create your first habit to start building streaks</p>
+              <button className="btn btn-primary mt-3" onClick={() => setShowModal(true)}>
+                Create Habit
+              </button>
+            </div>
+          </div>
+        ) : (
+          activeHabits.map(habit => {
+            const streakCalendar = getStreakCalendar(habit);
+            const today = new Date().toISOString().split('T')[0];
+            const todayCompleted = completions[habit.id]?.find(c => c.date === today)?.completed || false;
+
+            return (
+              <div key={habit.id} className="col-lg-6">
+                <div className="panel habit-card">
+                  <div className="panel__header">
+                    <div className="d-flex align-items-center gap-2">
+                      <div className={`habit-icon habit-icon--${habit.color}`}>
+                        <Icon name={habit.icon} size={20} />
+                      </div>
+                      <h3 className="panel__title mb-0">{habit.name}</h3>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="badge bg-primary">
+                        <Icon name="fire" size={12} className="me-1" />
+                        {habit.current_streak} day streak
+                      </span>
+                    </div>
+                  </div>
+                  <div className="panel__body">
+                    {habit.description && <p className="text-muted mb-3">{habit.description}</p>}
+
+                    {/* Streak Calendar */}
+                    <div className="habit-calendar mb-3">
+                      <div className="habit-calendar__header">
+                        <span className="text-muted">Last 30 days</span>
+                        <span className="text-muted">
+                          Longest: {habit.longest_streak} days
+                        </span>
+                      </div>
+                      <div className="habit-calendar__grid">
+                        {streakCalendar.map((day, i) => (
+                          <div
+                            key={i}
+                            className={`habit-calendar__day ${day.completed ? `habit-calendar__day--${habit.color}` : ''} ${day.dateObj.toDateString() === new Date().toDateString() ? 'habit-calendar__day--today' : ''}`}
+                            title={`${day.date} - ${day.completed ? 'Completed' : 'Not completed'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Toggle Today */}
+                    <div className="d-flex gap-2">
+                      <button
+                        className={`btn btn-lg flex-fill ${todayCompleted ? `btn-${habit.color}` : 'btn-outline-secondary'}`}
+                        onClick={() => handleToggle(habit.id)}
+                      >
+                        <Icon name={todayCompleted ? 'check-circle-fill' : 'circle'} size={20} className="me-2" />
+                        {todayCompleted ? 'Completed Today' : 'Mark as Complete'}
+                      </button>
+                      <button
+                        className="btn btn-outline-danger"
+                        onClick={() => onDeleteHabit(habit.id)}
+                      >
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Create Habit Modal */}
+      {showModal && (
+        <div className="modal-backdrop show" onClick={() => setShowModal(false)}>
+          <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Create New Habit</h5>
+                <button className="btn-close" onClick={() => setShowModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Habit Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={newHabitName}
+                    onChange={e => setNewHabitName(e.target.value)}
+                    placeholder="e.g., Read for 30 minutes"
+                    autoFocus
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Description</label>
+                  <textarea
+                    className="form-control"
+                    value={newHabitDesc}
+                    onChange={e => setNewHabitDesc(e.target.value)}
+                    placeholder="Add more details..."
+                    rows={2}
+                  />
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Color</label>
+                    <div className="d-flex gap-2 flex-wrap">
+                      {colorOptions.map(color => (
+                        <button
+                          key={color}
+                          className={`btn ${newHabitColor === color ? `btn-${color}` : `btn-outline-${color}`}`}
+                          onClick={() => setNewHabitColor(color)}
+                          style={{ width: '40px', height: '40px' }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Icon</label>
+                    <select
+                      className="form-select"
+                      value={newHabitIcon}
+                      onChange={e => setNewHabitIcon(e.target.value)}
+                    >
+                      {iconOptions.map(icon => (
+                        <option key={icon} value={icon}>{icon}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleCreate} disabled={creating || !newHabitName.trim()}>
+                  {creating ? 'Creating...' : 'Create Habit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main App Component
 // ─────────────────────────────────────────────────────────────────────────────
 const App = () => {
@@ -1994,19 +2821,31 @@ const App = () => {
   const [emails, setEmails] = useState(initialPayload.emails || []);
   const [tasks, setTasks] = useState(initialPayload.tasks || []);
   const [events, setEvents] = useState(initialPayload.events || []);
+  const [goals, setGoals] = useState([]);
+  const [achievements, setAchievements] = useState([]);
+  const [timeData, setTimeData] = useState(null);
+  const [habits, setHabits] = useState([]);
   const [pomodoroCount, setPomodoroCount] = useState(0);
   const [focusMins, setFocusMins] = useState(25);
   
   const [loading, setLoading] = useState({ 
     emails: !initialPayload.emails?.length, 
     tasks: !initialPayload.tasks?.length, 
-    events: !initialPayload.events?.length 
+    events: !initialPayload.events?.length,
+    goals: true,
+    achievements: true,
+    timeTracking: true,
+    habits: true,
   });
 
   useEffect(() => {
     if (!initialPayload.emails?.length) fetchEmails();
     if (!initialPayload.tasks?.length) fetchTasks();
     if (!initialPayload.events?.length) fetchEvents();
+    fetchGoals();
+    fetchAchievements();
+    fetchTimeTracking();
+    fetchHabits();
   }, []);
 
   const fetchEmails = async () => {
@@ -2082,10 +2921,146 @@ const App = () => {
     }
   };
 
+  // Goals handlers
+  const fetchGoals = async () => {
+    setLoading(prev => ({ ...prev, goals: true }));
+    try {
+      const data = await apiFetch(CONFIG.routes.apiGoals);
+      setGoals(data.goals || []);
+    } catch (err) {
+      console.error('Failed to fetch goals:', err);
+    } finally {
+      setLoading(prev => ({ ...prev, goals: false }));
+    }
+  };
+
+  const fetchAchievements = async () => {
+    setLoading(prev => ({ ...prev, achievements: true }));
+    try {
+      const data = await apiFetch(CONFIG.routes.apiAchievements);
+      setAchievements(data.achievements || []);
+    } catch (err) {
+      console.error('Failed to fetch achievements:', err);
+    } finally {
+      setLoading(prev => ({ ...prev, achievements: false }));
+    }
+  };
+
+  const handleCreateGoal = async (goalData) => {
+    const data = await apiFetch(CONFIG.routes.apiGoalsCreate, {
+      method: 'POST',
+      body: JSON.stringify(goalData)
+    });
+    if (data.goal) {
+      setGoals(prev => [...prev, data.goal]);
+      fetchAchievements();
+    }
+  };
+
+  const handleUpdateGoal = async (goalId, updates) => {
+    setGoals(prev => prev.map(g => g.id === goalId ? { ...g, ...updates } : g));
+    try {
+      const data = await apiFetch(`/api/goals/${goalId}/update/`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+      if (data.goal) {
+        setGoals(prev => prev.map(g => g.id === goalId ? data.goal : g));
+        fetchAchievements();
+      }
+    } catch (err) {
+      fetchGoals();
+    }
+  };
+
+  const handleDeleteGoal = async (goalId) => {
+    setGoals(prev => prev.filter(g => g.id !== goalId));
+    try {
+      await apiFetch(`/api/goals/${goalId}/delete/`, { method: 'DELETE' });
+    } catch (err) {
+      fetchGoals();
+    }
+  };
+
+  // Time Tracking handlers
+  const fetchTimeTracking = async () => {
+    setLoading(prev => ({ ...prev, timeTracking: true }));
+    try {
+      const data = await apiFetch(CONFIG.routes.apiTimeTracking);
+      setTimeData(data);
+    } catch (err) {
+      console.error('Failed to fetch time tracking:', err);
+    } finally {
+      setLoading(prev => ({ ...prev, timeTracking: false }));
+    }
+  };
+
+  // Habits handlers
+  const fetchHabits = async () => {
+    setLoading(prev => ({ ...prev, habits: true }));
+    try {
+      const data = await apiFetch(CONFIG.routes.apiHabits);
+      setHabits(data.habits || []);
+    } catch (err) {
+      console.error('Failed to fetch habits:', err);
+    } finally {
+      setLoading(prev => ({ ...prev, habits: false }));
+    }
+  };
+
+  const handleCreateHabit = async (habitData) => {
+    const data = await apiFetch(CONFIG.routes.apiHabitsCreate, {
+      method: 'POST',
+      body: JSON.stringify(habitData)
+    });
+    if (data.habit) {
+      setHabits(prev => [...prev, data.habit]);
+    }
+  };
+
+  const handleUpdateHabit = async (habitId, updates) => {
+    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
+    try {
+      const data = await apiFetch(`/api/habits/${habitId}/update/`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+      if (data.habit) {
+        setHabits(prev => prev.map(h => h.id === habitId ? data.habit : h));
+      }
+    } catch (err) {
+      fetchHabits();
+    }
+  };
+
+  const handleDeleteHabit = async (habitId) => {
+    setHabits(prev => prev.filter(h => h.id !== habitId));
+    try {
+      await apiFetch(`/api/habits/${habitId}/delete/`, { method: 'DELETE' });
+    } catch (err) {
+      fetchHabits();
+    }
+  };
+
+  const handleToggleHabitCompletion = async (habitId) => {
+    try {
+      const data = await apiFetch(`/api/habits/${habitId}/toggle/`, { method: 'POST' });
+      if (data.success) {
+        fetchHabits();
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to toggle habit:', err);
+    }
+    return false;
+  };
+
   const counts = {
     emails: emails.length,
     tasks: tasks.filter(t => t.status !== 'done').length,
-    events: events.length
+    events: events.length,
+    goals: goals.filter(g => g.status === 'active').length,
+    habits: habits.filter(h => h.is_active).length,
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -2115,9 +3090,9 @@ const App = () => {
           searchInputRef.current.blur();
         }
       }
-      // Number keys 1-5 to switch tabs
-      if (e.key >= '1' && e.key <= '5' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        const tabs = ['overview', 'inbox', 'tasks', 'calendar', 'focus'];
+      // Number keys 1-8 to switch tabs
+      if (e.key >= '1' && e.key <= '8' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        const tabs = ['overview', 'inbox', 'tasks', 'calendar', 'goals', 'analytics', 'habits', 'focus'];
         const tabIndex = parseInt(e.key) - 1;
         if (tabIndex < tabs.length) {
           setActiveTab(tabs[tabIndex]);
@@ -2184,6 +3159,35 @@ const App = () => {
         )}
         {activeTab === 'calendar' && (
           <CalendarTab events={events} loading={loading.events} onRefresh={fetchEvents} />
+        )}
+        {activeTab === 'goals' && (
+          <GoalsTab
+            goals={goals}
+            achievements={achievements}
+            loading={loading.goals}
+            onRefresh={fetchGoals}
+            onCreateGoal={handleCreateGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onDeleteGoal={handleDeleteGoal}
+          />
+        )}
+        {activeTab === 'analytics' && (
+          <AnalyticsTab
+            timeData={timeData}
+            loading={loading.timeTracking}
+            onRefresh={fetchTimeTracking}
+          />
+        )}
+        {activeTab === 'habits' && (
+          <HabitsTab
+            habits={habits}
+            loading={loading.habits}
+            onRefresh={fetchHabits}
+            onCreateHabit={handleCreateHabit}
+            onUpdateHabit={handleUpdateHabit}
+            onDeleteHabit={handleDeleteHabit}
+            onToggleCompletion={handleToggleHabitCompletion}
+          />
         )}
         {activeTab === 'focus' && (
           <FocusTab
